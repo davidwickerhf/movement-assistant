@@ -490,8 +490,11 @@ def double_confirm_delete_group(update, context):
             return ConversationHandler.END
         elif query.data == str(1):
             # USER CLICKED DELETE BUTTON
+            text = "Ok, this group is being being deleted... This might take a minute..."
+            query.edit_message_text(text=text)
             database.delete_group(delete_group_message.chat.id, global_user_id)
-            text = "Cool, this group's information has been deleted from the database, as well as the Trello Board. All call events have been erased."
+            text = "@{} Cool, this group's information has been deleted from the database, as well as the Trello Board. All call events have been erased.".format(
+                query.from_user.username)
             query.edit_message_text(text=text)
             return ConversationHandler.END
 ####################### CALL CONVERSATION FUNCTIONS #########################
@@ -571,7 +574,7 @@ def new_call(update, context):
             if argument == "":
                 argument = "N/A"
 
-        save_call_info(update=update, title=arguments[0], date=arguments[1], time=arguments[2],
+        save_call_info(update=update, context=context, title=arguments[0], date=arguments[1], time=arguments[2],
                        duration=arguments[3], description=arguments[4], agenda_link=arguments[5])
 
 
@@ -610,7 +613,7 @@ def add_title(update, context):
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
         save_call_info(
-            update=update, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
+            update=update, context=context, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
         return CALL_DETAILS
 
 
@@ -649,7 +652,7 @@ def add_date(update, context):
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
         save_call_info(
-            update=update, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
+            update=update, context=context, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
         return CALL_DETAILS
 
 
@@ -669,7 +672,7 @@ def add_time(update, context):
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
         save_call_info(
-            update=update, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
+            update=update, context=context, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
         return ConversationHandler.END
     else:
         # INPUT IS INCORRECT
@@ -722,17 +725,18 @@ def format_input_argument(update, state, argument_title, missing, index):
         print("EDIT GET ARGUMENTS MESSAGE")
 
 
-def save_call_info(update, title, date, time, duration, description="", agenda_link=""):
+@send_typing_action
+def save_call_info(update, context, title, date, time, duration, description="", agenda_link=""):
     global add_call_message
     add_call_message.delete()
-    try:
-        username = update.message.from_user.username
-    except:
-        username = update.callback_query.from_user.usernamame
+    username = update.message.from_user.username
+    message = update.message.chat.send_message(
+        text="Saving call information... This might take a minute...")
+
     values = database.save_call(
         message_id=update.message.message_id, chat_id=update.message.chat.id, title=title, date=date, time=time, user_id=update.message.from_user.id, duration=duration, description=description, agenda_link=agenda_link, username="@{}".format(username))
     if values == -1:
-        update.message.chat.send_message(
+        message.edit_text(
             text="There was a problem in adding the call to the database.\nPlease contact @davidwickerhf for technical support.")
         return ConversationHandler.END
 
@@ -748,6 +752,7 @@ def save_call_info(update, title, date, time, duration, description="", agenda_l
         "save_call", title, date, time, duration, description, agenda_link)
     print("Formatted text")
 
+    message.delete()
     update.message.reply_text(
         text=text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     print("Sent Reply")
