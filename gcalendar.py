@@ -12,7 +12,6 @@ from google.auth.transport.requests import Request
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
-
 if not (os.path.isfile('token.pkl') and os.path.getsize('token.pkl')) > 0:
 
     # Pull API keys from Config Vars on Heroku or JSON file if local
@@ -26,8 +25,7 @@ if not (os.path.isfile('token.pkl') and os.path.getsize('token.pkl')) > 0:
             client_secret = 'credentials.json'
     client_secret_file = 'credentials.json'
 
-    flow = InstalledAppFlow.from_client_secrets_file(
-        client_secrets_file=client_secret_file, scopes=SCOPES)
+    flow = InstalledAppFlow.from_client_secrets_file(client_secrets_file=client_secret_file, scopes=SCOPES)
     credentials = flow.run_console()
     pickle.dump(credentials, open("token.pkl", "wb"))
 
