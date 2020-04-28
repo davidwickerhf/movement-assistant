@@ -5,4 +5,4 @@ credentials.json
 set_env.py
 clean_json.py
 .vscode
-__pychache__
+__pycache__
