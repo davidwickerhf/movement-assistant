@@ -12,21 +12,22 @@ from google.auth.transport.requests import Request
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
-# Pull API keys from Config Vars on Heroku or JSON file if local
-# This pulls your variable out of Config Var and makes it available
-client_secret = os.environ.get('GCALENDAR_SECRET')
-if client_secret == None:  # This is to detect if you're working locally and the Config Var therefore isn't available
-    client_secret = 'credentials.json'
-else:
-    # This converts the Config Var to JSON for OAuth
-    with open('credentials.txt', 'w') as outfile:
-        json.dump(client_secret, outfile)
-        client_secret = 'credentials.txt'
-
 
 if not (os.path.isfile('token.pkl') and os.path.getsize('token.pkl')) > 0:
+
+    # Pull API keys from Config Vars on Heroku or JSON file if local
+    # This pulls your variable out of Config Var and makes it available
+    client_secret = os.environ.get('GCALENDAR_SECRET')
+    if client_secret != None:
+        # CODE RUNNING ON SERVER
+        client_json = json.load(client_secret)
+        with open('credentials.json', 'w') as f:
+            json.dump(client_json, f)
+            client_secret = 'credentials.json'
+    client_secret_file = 'credentials.json'
+
     flow = InstalledAppFlow.from_client_secrets_file(
-        client_secrets_file=client_secret, scopes=SCOPES)
+        client_secrets_file=client_secret_file, scopes=SCOPES)
     credentials = flow.run_console()
     pickle.dump(credentials, open("token.pkl", "wb"))
 
