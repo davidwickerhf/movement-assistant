@@ -6,31 +6,27 @@ import json
 from datetime import datetime, timedelta
 import utils
 from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
+from oauth2client.service_account import ServiceAccountCredentials
 from google.auth.transport.requests import Request
 
-
-SCOPES = ['https://www.googleapis.com/auth/calendar']
-
-if not (os.path.isfile('token.pkl') and os.path.getsize('token.pkl')) > 0:
-
-    # Pull API keys from Config Vars on Heroku or JSON file if local
-    # This pulls your variable out of Config Var and makes it available
-    client_secret = os.environ.get('GCALENDAR_SECRET')
+if not (os.path.isfile('calendar_token.pkl') and os.path.getsize('calendar_token.pkl') > 0):
+    scope = ['https://www.googleapis.com/auth/calendar']
+    # CREDENTIALS HAVE NOT BEEN INITIALIZED BEFORE
+    client_secret = os.environ.get('CLIENT_SECRET')
     if client_secret != None:
         # CODE RUNNING ON SERVER
-        client_json = json.loads(client_secret)
-        with open('credentials.json', 'w') as f:
-            json.dump(client_json, f)
-            client_secret = 'credentials.json'
-    client_secret_file = 'credentials.json'
+        client_secret = json.load(client_secret)
+    else:
+        # CODE RUNNING LOCALLY
+        print("CALENDAR: Resorted to local JSON file")
+        with open('client_secret.json') as json_file:
+            client_secret = json.load(json_file)
 
-    flow = InstalledAppFlow.from_client_secrets_file(
-        client_secrets_file=client_secret_file, scopes=SCOPES)
-    credentials = flow.run_console()
-    pickle.dump(credentials, open("token.pkl", "wb"))
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        client_secret, scope)
+    pickle.dump(creds, open("calendar_token.pkl", "wb"))
 
-credentials = pickle.load(open("token.pkl", "rb"))
+credentials = pickle.load(open("calendar_token.pkl", "rb"))
 service = build('calendar', 'v3', credentials=credentials)
 
 
@@ -70,7 +66,8 @@ def add_event(date, time, duration, title, description, group, color):
         'colorId': str(color),
     }
 
-    saved_event = service.events().insert(calendarId='primary', body=event,
+    calendar_id = os.environ.get(key='CALENDAR_ID', default='primary')
+    saved_event = service.events().insert(calendarId=calendar_id, body=event,
                                           sendNotifications=True).execute()
     url = saved_event.get('htmlLink')
     event_id = saved_event['id']

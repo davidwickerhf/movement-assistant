@@ -1,28 +1,34 @@
 import gspread
 import os
 import json
+import pickle
 from oauth2client.service_account import ServiceAccountCredentials
 import gcalendar
 import trelloc
 import utils
 
-# use creds to create a client to interact with the Google Drive API
-scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive',
-         'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive']
+if not (os.path.isfile('sheet_token.pkl') and os.path.getsize('sheet_token.pkl') > 0):
+    # use creds to create a client to interact with the Google Drive API
+    scope = [
+        'https://spreadsheets.google.com/feeds',
+        'https://www.googleapis.com/auth/drive',
+        'https://www.googleapis.com/auth/drive.file',
+        'https://www.googleapis.com/auth/drive']
+    # CREDENTIALS HAVE NOT BEEN INITIALIZED BEFORE
+    client_secret = os.environ.get('CLIENT_SECRET')
+    if client_secret == None:
+        # CODE RUNNING LOCALLY
+        print('DATABASE: Resorted to local JSON file')
+        with open('client_secret.json') as json_file:
+            client_secret = json.load(json_file)
+    else:
+        # CODE RUNNING ON SERVER
+        client_secret = json.load(client_secret)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        client_secret, scope)
+    pickle.dump(creds, open('sheet_token.pkl', 'wb'))
 
-# Pull API keys from Config Vars on Heroku or JSON file if local
-# This pulls your variable out of Config Var and makes it available
-client_secret = os.environ.get('DATABASE_SECRET')
-if client_secret == None:  # This is to detect if you're working locally and the Config Var therefore isn't available
-    print('CALENDAR: Resorted to local JSON file')
-    # ... so it pulls from the locally stored JSON file.
-    with open('client_secret.json') as json_file:
-        client_secret = json.load(json_file)
-else:
-    # This converts the Config Var to JSON for OAuth
-    client_secret = json.load(client_secret)
-
-creds = ServiceAccountCredentials.from_json_keyfile_dict(client_secret, scope)
+creds = pickle.load(open("sheet_token.pkl", "rb"))
 client = gspread.authorize(creds)
 
 # Find a workbook by name and open the first sheet
