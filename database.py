@@ -20,10 +20,14 @@ if not (os.path.isfile('sheet_token.pkl') and os.path.getsize('sheet_token.pkl')
         # CODE RUNNING LOCALLY
         print('DATABASE: Resorted to local JSON file')
         with open('client_secret.json') as json_file:
-            client_secret = json.load(json_file)
+            client_secret_dict = json.load(json_file)
+    else:
+        # CODE RUNNING ON SERVER
+        client_secret_dict = eval(client_secret)
+        print("JSON CLIENT SECRET:  ", type(client_secret_dict))
 
     creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        client_secret, scope)
+        client_secret_dict, scope)
     pickle.dump(creds, open('sheet_token.pkl', 'wb'))
 
 creds = pickle.load(open("sheet_token.pkl", "rb"))
