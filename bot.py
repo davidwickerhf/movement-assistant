@@ -47,7 +47,7 @@ delete_group_message = ""
 
 # CALL CONVERSATION MESSAGES TEXT
 save_group_message = "<b>TRANSPARENCY BOT</b> \nThank you for adding me to this chat! I am the FFF Transparency Bot and I'm managed by the [WG] Transparency! \nI can help your group by keeping track of planned calls.\nPlease follow this wizard to complete saving this group's informations in the database:\n\n<b>Select a Category for this group:</b>"
-save_group_alreadyregistered_message = "<b>TRANSPARENCY BOT</b>\nThis group has already been registered once, no need to do it again"
+save_group_alreadyregistered_message = "<b>TRANSPARENCY BOT</b>\nThis group has already been registered once, no need to do it again\nType /help tp get a list of available commands"
 new_group_description = "- /newgroup -> This command is run automatically once the bot is added to a groupchat. It will get some information about the group (such as group Title and admins) and save it onto the FFF Database.\n<code>/newgroup</code>"
 new_call_description = "- /newcall -> Schedule a call in the FFF Database as well as in the Transparency Calendar and Trello Board. \nArguments: <b>Title, Date, Time (GMT), Duration (optional), Description (optional), Agenda Link (optional):</b> \n<code>/newcall Group Call, Wednesday 15th March, 15:00, 00:45, Checkup Call, Link</code>"
 help_description = "<b>BOT INFORMATION</b>\nThe FFF Transparency Bot can respond to the following commands:\n - /help -> Get a list of all available commands\n{}\n\n<b>The following commands are automatically run by the bot:</b>\n{}"
@@ -79,8 +79,8 @@ def help(update, context):
 
 ######################## GROUP CONVERSATION FUNCTIONS #######################
 def new_group(update, context):
-    for member in update.message.new_chat_members:
-        if member.user.username == "WGtransparencybot":
+    for user in update.message.new_chat_members:
+        if user.username == "WGtransparencybot":
             print("BOT: --- BOT ADDED IN GROUP ---")
             # LAUNCH SAVE GROUP DEF
             save_group(update, context)
@@ -92,12 +92,17 @@ def save_group(update, context):
     chat = update.message.chat
     title = chat.title
     chat_id = chat.id
-    admins = chat.get_administrators()
-    if (database.find_row_by_id("groups", chat_id)[0] == -1):
+    if chat_id == update.message.from_user.id:
+        print("Chat is user")
+        update.message.chat.send_message(
+            text="This command can be run only in group chats")
+        return ConversationHandler.END
+    elif (database.find_row_by_id("groups", chat_id)[0] == -1):
         # SAVE INFO IN GLOBAL LIST
         global group_saving
         global add_group_message
         global global_user_id
+        admins = chat.get_administrators()
         group_saving = [chat_id, title, admins, "", "",
                         "Telegram", "", "", "", "", "", "", "", ""]
         global_user_id = update.message.from_user.id
@@ -416,7 +421,12 @@ def delete_group(update, context):
     global delete_group_message
     member = update.message.chat.get_member(update.message.from_user.id)
     print("BOT: Member Status: ", member.status)
-    if database.find_row_by_id(item_id=group_id)[0] == -1:
+    if group_id == user.id:
+        print("Chat is user")
+        update.message.chat.send_message(
+            text="This command can be run only in group chats")
+        return ConversationHandler.END
+    elif database.find_row_by_id(item_id=group_id)[0] == -1:
         print("BOT - Delete Group: Group is not registerred")
         delete_group_message = update.message.reply_text(
             text="This group isn't registerred yet, thus it can't be deleted. Please reigster this group with the following command:\n/newgroup - This command will take you through a wizard to register this group's information into the FFF Transparency Database.")
@@ -503,12 +513,14 @@ def new_call(update, context):
         print("Chat is user")
         groupchat.send_message(
             text=new_call_onlygroups_message)
+        return ConversationHandler.END
     elif database.find_row_by_id(item_id=update.message.chat.id)[0] == -1:
         print("Chat is not registered yet")
         text = chat_not_registerred.format(
             new_group_description)
         groupchat.send_message(
             text=text, parse_mode=ParseMode.HTML)
+        return ConversationHandler.END
     else:
         message_text = update.message.text + ' '
         print("Message Text: " + message_text)
