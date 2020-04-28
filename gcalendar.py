@@ -19,13 +19,14 @@ if not (os.path.isfile('token.pkl') and os.path.getsize('token.pkl')) > 0:
     client_secret = os.environ.get('GCALENDAR_SECRET')
     if client_secret != None:
         # CODE RUNNING ON SERVER
-        client_json = json.load(client_secret)
+        client_json = json.loads(client_secret)
         with open('credentials.json', 'w') as f:
             json.dump(client_json, f)
             client_secret = 'credentials.json'
     client_secret_file = 'credentials.json'
 
-    flow = InstalledAppFlow.from_client_secrets_file(client_secrets_file=client_secret_file, scopes=SCOPES)
+    flow = InstalledAppFlow.from_client_secrets_file(
+        client_secrets_file=client_secret_file, scopes=SCOPES)
     credentials = flow.run_console()
     pickle.dump(credentials, open("token.pkl", "wb"))
 
