@@ -1,5 +1,6 @@
 import gspread
 import os
+import json
 from oauth2client.service_account import ServiceAccountCredentials
 import gcalendar
 import trelloc
@@ -8,12 +9,23 @@ import utils
 # use creds to create a client to interact with the Google Drive API
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive',
          'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_name(
-    'client_secret.json', scope)
+
+# Pull API keys from Config Vars on Heroku or JSON file if local
+# This pulls your variable out of Config Var and makes it available
+client_secret = os.environ.get('DATABASE_SECRET')
+if client_secret == None:  # This is to detect if you're working locally and the Config Var therefore isn't available
+    print('CALENDAR: Resorted to local JSON file')
+    # ... so it pulls from the locally stored JSON file.
+    with open('client_secret.json') as json_file:
+        client_secret = json.load(json_file)
+else:
+    # This converts the Config Var to JSON for OAuth
+    client_secret = json.load(client_secret)
+
+creds = ServiceAccountCredentials.from_json_keyfile_dict(client_secret, scope)
 client = gspread.authorize(creds)
 
 # Find a workbook by name and open the first sheet
-# -- UNCOMMENT WHEN DEPLOYING TO HEROKU
 SPREADSHEET = os.environ['SPREADSHEET']
 # -- DELETE WHEN DEPLOYING TO HEROKU
 spreadsheet = client.open_by_key(SPREADSHEET)
@@ -34,14 +46,19 @@ def save_group(chat_id, title, admins, category="", region="", platform="", rest
         except:
             admins_string = admins_string + user.first_name + " " + user.last_name + "; "
     admins_string = admins_string[:-2]
+    print("DATABASE: Got Admins")
 
     # GET RANDOM CALENDAR COLOR:
     color_id = utils.get_random_event_color()
+    print("DATABASE: Got Group Color")
 
     # CREATE TRELLO CARD
-    parent_card = get_group_card(parentgroup)
-    if parent_card == -1:
+    if parentgroup != '':
+        parent_card = get_group_card(parentgroup)
+        print("DATABASE: Got parent card")
+    else:
         parent_card = ""
+        print("DATABASE: No parent")
     card_info = trelloc.add_group(title, admins_string, purpose, onboarding,
                                   platform, region, category, restriction, is_subgroup, parent_card, date)
     card_id = card_info[0]
@@ -208,22 +225,25 @@ def find_row_by_id(sheet=groupchats, item_id="", col=1):
 
 
 def get_group_title(group_id, sheet=groupchats):
+    print("DATABASE: get_group_title()")
     row = find_row_by_id(sheet, group_id)[0]
-    group_title = groupchats.cell(row, 3).value
+    group_title = sheet.cell(row, 3).value
     return group_title
 
 
 def get_group_color(group_id, sheet=groupchats):
+    print("DATABASE: get_group_color()")
     row = find_row_by_id(sheet, group_id)[0]
-    group_color = groupchats.cell(row, 8).value
+    group_color = sheet.cell(row, 8).value
     return group_color
 
 
 def get_group_card(group_id, sheet=groupchats):
-    row = find_row_by_id(groupchats, group_id)[0]
-    if row[0] == -1:
+    print("DATABASE: get_group_card()")
+    row = find_row_by_id(sheet, group_id)[0]
+    if row == -1:
         return row
-    card_id = groupchats.cell(row, 2).value
+    card_id = sheet.cell(row, 2).value
     return card_id
 
 
