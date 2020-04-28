@@ -15,7 +15,7 @@ if not (os.path.isfile('calendar_token.pkl') and os.path.getsize('calendar_token
     client_secret = os.environ.get('CLIENT_SECRET')
     if client_secret != None:
         # CODE RUNNING ON SERVER
-        client_secret = json.load(client_secret)
+        client_secret = json.loads(client_secret)
     else:
         # CODE RUNNING LOCALLY
         print("CALENDAR: Resorted to local JSON file")
@@ -23,7 +23,7 @@ if not (os.path.isfile('calendar_token.pkl') and os.path.getsize('calendar_token
             client_secret = json.load(json_file)
 
     creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        client_secret, scope)
+        client_secret, scopes=scope)
     pickle.dump(creds, open("calendar_token.pkl", "wb"))
 
 
