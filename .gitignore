@@ -2,7 +2,6 @@ env
 token.pkl
 client_secret.json
 credentials.json
-credentials.txt
 set_env.py
 clean_json.py
 .vscode
