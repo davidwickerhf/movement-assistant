@@ -1,16 +1,23 @@
+from telegram.ext.conversationhandler import ConversationHandler
+from telegram.vendor.ptb_urllib3.urllib3 import util
+from datetime import datetime
+from functools import wraps
+import utils
+from oauth2client.service_account import ServiceAccountCredentials
+import json
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, ReplyKeyboardMarkup, ChatAction
 import logging
 import os
-import json
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import database
-import utils
-from functools import wraps
-from datetime import datetime
-from telegram.vendor.ptb_urllib3.urllib3 import util
-from telegram.ext.conversationhandler import ConversationHandler
+if os.environ.get('TOKEN') == None:
+    # CODE IS RUN LOCALLY
+    import set_env
+    set_env.set_envs()
+    local = True
+    import database
+else:
+    import database
+
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -736,14 +743,16 @@ def save_call_info(update, title, date, time, duration, description="", agenda_l
 
 def main():
     # - COMMENT WHEN DEPLOYING TO HEROKU
-    TOKEN = os.environ['TOKEN']
+    TOKEN = os.environ.get('TOKEN')
     updater = Updater(token=TOKEN, use_context=True)
     dp = updater.dispatcher
 
-    PORT = int(os.environ.get('PORT', '5000'))
-    updater.start_webhook(listen="0.0.0.0", port=PORT, url_path=TOKEN)
-    updater.bot.set_webhook(
-        "https://fff-transparency-wg.herokuapp.com/" + TOKEN)
+    if not local:
+        # CODE IS RUN ON SERVER
+        PORT = int(os.environ.get('PORT', '5000'))
+        updater.start_webhosok(listen="0.0.0.0", port=PORT, url_path=TOKEN)
+        updater.bot.set_webhook(
+            "https://fff-transparency-wg.herokuapp.com/" + TOKEN)
 
     # Commands
     #dp.add_handler(MessageHandler(Filters.status_update.new_chat_members, new_group))
@@ -792,6 +801,8 @@ def main():
     dp.add_handler(delete_group_handler)
     dp.add_error_handler(error)
 
+    if local:
+        updater.start_polling()
     updater.idle()
 
 

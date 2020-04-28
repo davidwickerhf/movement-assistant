@@ -1,18 +1,17 @@
 from trello import TrelloClient
 import os
 
-TRELLO_KEY = os.environ['TRELLO_KEY']
-TRELLO_TOKEN = os.environ['TRELLO_TOKEN']
-TRELLO_SECRET = os.environ['TRELLO_SECRET']
+TRELLO_KEY = os.environ.get('TRELLO_KEY')
+TRELLO_TOKEN = os.environ.get('TRELLO_TOKEN')
+TRELLO_SECRET = os.environ.get('TRELLO_SECRET')
 
-
-board_id = "5e74996a963b6a6063936eed"
 client = TrelloClient(
     api_key=TRELLO_KEY,
     api_secret=TRELLO_SECRET,
     token=TRELLO_TOKEN,
 )
 
+board_id = "5e74996a963b6a6063936eed"
 # LISTs IDs
 board = client.get_board(board_id=board_id)
 newgroup_list_id = "5e7499aa34052a6172bd0e3f"
