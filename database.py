@@ -23,7 +23,7 @@ if not (os.path.isfile('sheet_token.pkl') and os.path.getsize('sheet_token.pkl')
             client_secret_dict = json.load(json_file)
     else:
         # CODE RUNNING ON SERVER
-        client_secret_dict = eval(client_secret)
+        client_secret_dict = json.loads(client_secret)
         print("JSON CLIENT SECRET:  ", type(client_secret_dict))
 
     creds = ServiceAccountCredentials.from_json_keyfile_dict(

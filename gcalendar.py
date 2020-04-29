@@ -15,7 +15,7 @@ if not (os.path.isfile('calendar_token.pkl') and os.path.getsize('calendar_token
     client_secret = os.environ.get('CLIENT_SECRET')
     if client_secret != None:
         # CODE RUNNING ON SERVER
-        client_secret_dict = eval(client_secret)
+        client_secret_dict = json.loads(client_secret)
         print("JSON CLIENT SECRET:  ", type(client_secret_dict))
     else:
         # CODE RUNNING LOCALLY
@@ -77,5 +77,6 @@ def add_event(date, time, duration, title, description, group, color):
 
 
 def delete_event(event_id):
+    calendar_id = os.environ.get(key='CALENDAR_ID', default='primary')
     print("CALENDAR: Delete Event: Id: ", event_id)
-    service.events().delete(calendarId='primary', eventId=event_id).execute()
+    service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
