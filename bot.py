@@ -17,6 +17,7 @@ if os.environ.get('TOKEN') == None:
     import database
 else:
     import database
+    local = False
 
 
 logging.basicConfig(
