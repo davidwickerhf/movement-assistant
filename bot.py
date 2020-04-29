@@ -442,7 +442,7 @@ def delete_group(update, context):
         owner_username = ""
         for admin in update.message.chat.get_administrators():
             if admin.status == "creator":
-                owner_username = admin.user.usernamame
+                owner_username = admin.user.username
         print("BOT - Delete Group: User does not have permission to delete the group")
         delete_group_message = update.message.reply_text(
             text="Sorry, you don't have permission to delete this group. Please ask the group owner to do it.\n@{}".format(owner_username))
