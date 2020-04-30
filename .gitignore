@@ -4,3 +4,4 @@ client_secret.json
 .vscode
 __pycache__
 env
+env_variables.json

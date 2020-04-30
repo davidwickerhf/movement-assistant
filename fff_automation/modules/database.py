@@ -35,7 +35,7 @@ creds = pickle.load(open("fff_automatio/secrets/sheet_token.pkl", "rb"))
 client = gspread.authorize(creds)
 
 # IF NO SPREADSHEET ENV VARIABLE HAS BEEN SET, SET UP NEW SPREADSHEET
-if os.environ.get('SPREADSHEET') == "" or None:
+if os.environ.get('SPREADSHEET') == "" or None or "insert_here_if_available":
     set_env.set_database(client)
 
 SPREADSHEET = os.environ.get('SPREADSHEET')

@@ -5,17 +5,13 @@ from setup import set_env
 TRELLO_KEY = os.environ.get('TRELLO_KEY')
 TRELLO_TOKEN = os.environ.get('TRELLO_TOKEN')
 
-if TRELLO_KEY == "" or None or "insert_here" or TRELLO_TOKEN == "" or None or "insert_here":
-    print("TRELLOC: AUTH ERROR: Trello Keys missing: ", TRELLO_KEY)
-
-
 client = TrelloClient(
     api_key=TRELLO_KEY,
     token=TRELLO_TOKEN,
 )
 
-if os.environ.get('TRELLO_BOARD_ID') == "" or None:
-    set_env.set_trello(client)
+if os.environ.get('TRELLO_BOARD_ID') == "" or None or "insert_here_if_available":
+    set_env.set_trello(client, TRELLO_KEY, TRELLO_TOKEN)
 board_id = os.environ.get('TRELLO_BOARD_ID')
 
 

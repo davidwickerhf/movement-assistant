@@ -43,54 +43,59 @@ def set_trello(client, key, token):
     response = requests.request("POST", url, params=querystring)
     board_id = response.json()["shortUrl"].split("/")[-1].strip()
     os.environ['TRELLO_BOARD_ID'] = board_id
+    board = client.get_board(board_id=board_id)
+    lists = board.get_lists()
+    for trello_list in lists:
+        trello_list.close()
+
 
     # CREATE LISTS
     # Board info list
-    os.environ['TRELLO_INFO_LIST'] = client.add_list(
-        name="INFORMATION", position="bottom").id
+    os.environ['TRELLO_INFO_LIST'] = board.add_list(
+        name="INFORMATION", pos="bottom").id
     # Calls list
-    os.environ['TRELLO_CALLS_LIST'] = client.add_list(
-        name="INFORMATION", position="bottom").id
+    os.environ['TRELLO_CALLS_LIST'] = board.add_list(
+        name="INFORMATION", pos="bottom").id
     # discussion groups
-    os.environ['TRELLO_DG_LIST'] = client.add_list(
-        name="INFORMATION", position="bottom").id
+    os.environ['TRELLO_DG_LIST'] = board.add_list(
+        name="INFORMATION", pos="bottom").id
     # working groups
-    os.environ['TRELLO_WG_LIST'] = client.add_list(
-        name="INFORMATION", position="bottom").id
+    os.environ['TRELLO_WG_LIST'] = board.add_list(
+        name="INFORMATION", pos="bottom").id
     # projects groups
-    os.environ['TRELLO_PROJECTS_LIST'] = client.add_list(
-        name="INFORMATION", position="bottom").id
+    os.environ['TRELLO_PROJECTS_LIST'] = board.add_list(
+        name="INFORMATION", pos="bottom").id
     # past calls
-    os.environ['TRELLO_PAST_CALLS_LIST'] = client.add_list(
-        name="INFORMATION", position="bottom").id
+    os.environ['TRELLO_PAST_CALLS_LIST'] = board.add_list(
+        name="INFORMATION", pos="bottom").id
     # archive
-    os.environ['TRELLO_ARCHIVE_LIST'] = client.add_list(
-        name="INFORMATION", position="bottom").id
+    os.environ['TRELLO_ARCHIVE_LIST'] = board.add_list(
+        name="INFORMATION", pos="bottom").id
 
     # CREATE LABELS
-    os.environ['TRELLO_UPCOMING_LABEL'] = client.add_label(
+    os.environ['TRELLO_UPCOMING_LABEL'] = board.add_label(
         name="UPCOMING", color="yellow").id
-    os.environ['TRELLO_CLOSEDGROUP_LABEL'] = client.add_label(
+    os.environ['TRELLO_CLOSEDGROUP_LABEL'] = board.add_label(
         name="CLOSED GROUP", color="purple").id
-    os.environ['TRELLO_RESTRICTEDGROUP_LABEL'] = client.add_label(
+    os.environ['TRELLO_RESTRICTEDGROUP_LABEL'] = board.add_label(
         name="RESTRICTED GROUP", color="blue").id
-    os.environ['TRELLO_OPENGROUP_LABEL'] = client.add_label(
+    os.environ['TRELLO_OPENGROUP_LABEL'] = board.add_label(
         name="OPEN GROUP", color="sky").id
-    os.environ['TRELLO_AFRICA_LABEL'] = client.add_label(
+    os.environ['TRELLO_AFRICA_LABEL'] = board.add_label(
         name="AFRICA", color="black").id
-    os.environ['TRELLO_ASIA_LABEL'] = client.add_label(
+    os.environ['TRELLO_ASIA_LABEL'] = board.add_label(
         name="ASIA", color="black").id
-    os.environ['TRELLO_EUROPE_LABEL'] = client.add_label(
+    os.environ['TRELLO_EUROPE_LABEL'] = board.add_label(
         name="EUROPE", color="black").id
-    os.environ['TRELLO_NORTHAMREICA_LABEL'] = client.add_label(
+    os.environ['TRELLO_NORTHAMREICA_LABEL'] = board.add_label(
         name="NORTH AMERICA", color="black").id
-    os.environ['TRELLO_SOUTHAMERICA_LABEL'] = client.add_label(
+    os.environ['TRELLO_SOUTHAMERICA_LABEL'] = board.add_label(
         name="SOUTH AMERICA", color="black").id
-    os.environ['TRELLO_OCEANIA_LABEL'] = client.add_label(
+    os.environ['TRELLO_OCEANIA_LABEL'] = board.add_label(
         name="OCEANIA", color="black").id
-    os.environ['TRELLO_GLOBAL_LABEL'] = client.add_label(
+    os.environ['TRELLO_GLOBAL_LABEL'] = board.add_label(
         name="GLOBAL", color="black").id
-    os.environ['TRELLO_PASTCALL_LABEL'] = client.add_label(
+    os.environ['TRELLO_PASTCALL_LABEL'] = board.add_label(
         name="PAST CALL", color="black").id
 
     # CREATE INFO CARD
