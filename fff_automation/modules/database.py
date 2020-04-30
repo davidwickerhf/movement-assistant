@@ -3,11 +3,12 @@ import os
 import json
 import pickle
 from oauth2client.service_account import ServiceAccountCredentials
-import gcalendar
-import trelloc
-import utils
+from modules import gcalendar
+from modules import trelloc
+from setup import set_env
+from modules import utils
 
-if not (os.path.isfile('sheet_token.pkl') and os.path.getsize('sheet_token.pkl') > 0):
+if not (os.path.isfile('fff_automatio/secrets/sheet_token.pkl') and os.path.getsize('fff_automatio/secrets/sheet_token.pkl') > 0):
     # use creds to create a client to interact with the Google Drive API
     scope = [
         'https://spreadsheets.google.com/feeds',
@@ -19,7 +20,7 @@ if not (os.path.isfile('sheet_token.pkl') and os.path.getsize('sheet_token.pkl')
     if client_secret == None:
         # CODE RUNNING LOCALLY
         print('DATABASE: Resorted to local JSON file')
-        with open('client_secret.json') as json_file:
+        with open('secrets/client_secret.json') as json_file:
             client_secret_dict = json.load(json_file)
     else:
         # CODE RUNNING ON SERVER
@@ -28,14 +29,16 @@ if not (os.path.isfile('sheet_token.pkl') and os.path.getsize('sheet_token.pkl')
 
     creds = ServiceAccountCredentials.from_json_keyfile_dict(
         client_secret_dict, scope)
-    pickle.dump(creds, open('sheet_token.pkl', 'wb'))
+    pickle.dump(creds, open('fff_automatio/secrets/sheet_token.pkl', 'wb'))
 
-creds = pickle.load(open("sheet_token.pkl", "rb"))
+creds = pickle.load(open("fff_automatio/secrets/sheet_token.pkl", "rb"))
 client = gspread.authorize(creds)
 
-# Find a workbook by name and open the first sheet
-SPREADSHEET = os.environ['SPREADSHEET']
-# -- DELETE WHEN DEPLOYING TO HEROKU
+# IF NO SPREADSHEET ENV VARIABLE HAS BEEN SET, SET UP NEW SPREADSHEET
+if os.environ.get('SPREADSHEET') == "" or None:
+    set_env.set_database(client)
+
+SPREADSHEET = os.environ.get('SPREADSHEET')
 spreadsheet = client.open_by_key(SPREADSHEET)
 groupchats = spreadsheet.get_worksheet(0)
 archive = spreadsheet.get_worksheet(1)

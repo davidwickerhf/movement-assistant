@@ -4,12 +4,12 @@ import pickle
 import os
 import json
 from datetime import datetime, timedelta
-import utils
+from modules import utils
 from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 from google.auth.transport.requests import Request
 
-if not (os.path.isfile('calendar_token.pkl') and os.path.getsize('calendar_token.pkl') > 0):
+if not (os.path.isfile('fff_automation/secrets/calendar_token.pkl') and os.path.getsize('fff_automation/secrets/calendar_token.pkl') > 0):
     scope = ['https://www.googleapis.com/auth/calendar']
     # CREDENTIALS HAVE NOT BEEN INITIALIZED BEFORE
     client_secret = os.environ.get('CLIENT_SECRET')
@@ -20,15 +20,16 @@ if not (os.path.isfile('calendar_token.pkl') and os.path.getsize('calendar_token
     else:
         # CODE RUNNING LOCALLY
         print("CALENDAR: Resorted to local JSON file")
-        with open('client_secret.json') as json_file:
+        with open('fff_automation/secrets/client_secret.json') as json_file:
             client_secret_dict = json.load(json_file)
 
     creds = ServiceAccountCredentials.from_json_keyfile_dict(
         client_secret_dict, scopes=scope)
-    pickle.dump(creds, open("calendar_token.pkl", "wb"))
+    pickle.dump(creds, open("fff_automation/secrets/calendar_token.pkl", "wb"))
 
 
-credentials = pickle.load(open("calendar_token.pkl", "rb"))
+credentials = pickle.load(
+    open("fff_automation/secrets/calendar_token.pkl", "rb"))
 service = build('calendar', 'v3', credentials=credentials)
 
 
