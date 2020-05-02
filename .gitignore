@@ -1,8 +1,7 @@
-env
+env_variables.json
 sheet_token.pkl
 calendar_token.pkl
 client_secret.json
-set_env.py
-clean_json.py
 .vscode
 __pycache__
+env
