@@ -1,48 +1,86 @@
-from trello import TrelloClient
 import os
-from setup import set_env
+import emoji
+from trello import TrelloClient
+from modules import settings
 
-TRELLO_KEY = os.environ.get('TRELLO_KEY')
-TRELLO_TOKEN = os.environ.get('TRELLO_TOKEN')
+
+TRELLO_KEY = settings.get_var('TRELLO_KEY')
+print("TRELLOC: Trello Key: ", TRELLO_KEY)
+TRELLO_TOKEN = settings.get_var('TRELLO_TOKEN')
+print("TRELLOC: Trello Token: ", TRELLO_TOKEN)
 
 client = TrelloClient(
     api_key=TRELLO_KEY,
     token=TRELLO_TOKEN,
 )
 
-if os.environ.get('TRELLO_BOARD_ID') == "" or None or "insert_here_if_available":
-    set_env.set_trello(client, TRELLO_KEY, TRELLO_TOKEN)
-board_id = os.environ.get('TRELLO_BOARD_ID')
+if settings.get_var('TRELLO_BOARD_ID') == -1:
+    # Creating new board
+    print("TERLLOC: No Past Trello Id found")
+    settings.set_trello(client, TRELLO_KEY, TRELLO_TOKEN)
+else:
+    # Board is indicated, saving lists and labels ids as config vars.
+    # Cicle through the lists
+    # Add the lists ids to the env. file
+    print("TRELLOC: Initiating Config Vars. Board Exists")
+    lists = client.get_board(
+        board_id=settings.get_var('TRELLO_BOARD_ID')).all_lists()
+    lists = lists[3:]
+    lists_dict = {}
+    for num, trellolist in enumerate(lists):
+        lists_dict[num] = trellolist.id
+    settings.set_var('lists', lists_dict)
+
+    # Cicle through the labels
+    # Remove the labels without name
+    # Add the lables to env. file
+    labels = client.get_board(board_id=settings.get_var(
+        'TRELLO_BOARD_ID')).get_labels()
+    labels_dict = {}
+    remove = []
+    for num, label in enumerate(labels):
+        if label.name == '':
+            remove.append(label)
+    for label in remove:
+        labels.remove(label)
+    for label in labels:
+        for num, index in enumerate(settings.label_order):
+            if index in label.name:
+                labels_dict[num+7] = label.id
+    settings.set_var('labels', labels_dict)
 
 
-# LISTs IDs
+board_id = settings.get_var('TRELLO_BOARD_ID')
 board = client.get_board(board_id=board_id)
-lists = board.all_lists()
 
 # LISTS (COLUMNS) IN TRELLO BOARD
-planned_calls_list = lists[1]
-dg_list = lists[2]
-wg_list = lists[3]
-projects_list = lists[4]
-past_calls_list = lists[5]
-archive_list = lists[6]
+planned_calls_list = board.get_list(
+    settings.get_var(settings.TL_PLANNEDCALLS, 'lists'))
+dg_list = board.get_list(settings.get_var(
+    settings.TL_DG, 'lists'))
+wg_list = board.get_list(settings.get_var(
+    settings.TL_WG, 'lists'))
+projects_list = board.get_list(
+    settings.get_var(settings.TL_IP, 'lists'))
+past_calls_list = board.get_list(
+    settings.get_var(settings.TL_PASTCALLS, 'lists'))
+archive_list = board.get_list(settings.get_var(settings.TL_ARCHIVE, 'lists'))
 
 # LABELS IDs -  accessed by bots
-labels_ids = board.get_labels()
-upcoming_id = labels_ids[0].id
-past_call_label_id = labels_ids[11].id
+upcoming_id = settings.get_var(settings.TB_UPCOMING, 'labels')
+past_call_label_id = settings.get_var(settings.TB_PAST, 'labels')
 # Restriction labels ids
-restrictions = {'Open': labels_ids[4].id,
-                "Restricted": labels_ids[3].id,
-                "Closed": labels_ids[2].id}
+restrictions = {'Open': settings.get_var(settings.TB_OPEN, 'labels'),
+                "Restricted": settings.get_var(settings.TB_RESTRICTED, 'labels'),
+                "Closed": settings.get_var(settings.TB_CLOSED, 'labels')}
 # Region labels ids
-regions = {"Global": labels_ids[8].id,
-           "Europe": labels_ids[7].id,
-           "South America": labels_ids[12].id,
-           "North America": labels_ids[9].id,
-           "Africa": labels_ids[5].id,
-           "Asia": labels_ids[6].id,
-           "Oceania": labels_ids[10].id}
+regions = {"Global": settings.get_var(settings.TB_GLOBAL, 'labels'),
+           "Europe": settings.get_var(settings.TB_EUROPE, 'labels'),
+           "South America": settings.get_var(settings.TB_SOUTHAMERICA, 'labels'),
+           "North America": settings.get_var(settings.TB_NORTHAMERICA, 'labels'),
+           "Africa": settings.get_var(settings.TB_AFRICA, 'labels'),
+           "Asia": settings.get_var(settings.TB_ASIA, 'labels'),
+           "Oceania": settings.get_var(settings.TB_OCEANIA, 'labels')}
 
 WORKING_GROUP = "Working Group"
 DISCUSSION_GROUP = "Discussion Group"
@@ -137,7 +175,7 @@ def add_call(title, groupchat, group_trello_id, date, time, duration, descriptio
 
     # CREATE TRELLO CARD
     newcard = planned_calls_list.add_card(
-        name=title, desc=description, labels=labels, position="bottom")
+        name=title, desc=description, labels=labels, position='top')
     print("TRELLO: Saved Call Card: ", newcard)
 
     # CREATE ATTACHMENTS

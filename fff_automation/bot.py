@@ -1,23 +1,24 @@
 from telegram.ext.conversationhandler import ConversationHandler
-from telegram.vendor.ptb_urllib3.urllib3 import util
-from datetime import datetime
-from functools import wraps
-from modules import utils
-from oauth2client.service_account import ServiceAccountCredentials
-import json
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, ReplyKeyboardMarkup, ChatAction
+from telegram.ext.dispatcher import run_async
+from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime
+from functools import wraps
+import json
 import logging
 import os
-if os.environ.get('TOKEN') == None or "":
+from modules import utils
+from modules import database
+from modules import settings
+
+if os.environ.get('PORT') in (None, ""):
     # CODE IS RUN LOCALLY
-    from setup import set_env
-    set_env.set_envs()
     local = True
-    from modules import database
+    print("BOT: Code running locally")
 else:
-    from modules import database
     local = False
+    print("BOT: Code running on server")
 
 
 logging.basicConfig(
@@ -73,14 +74,13 @@ def send_typing_action(func):
     return command_func
 
 
-@run_async
 def help(update, context):
     update.message.chat.send_message(text=help_description.format(
         new_call_description, new_group_description), parse_mode=ParseMode.HTML)
 
 
 ######################## GROUP CONVERSATION FUNCTIONS #######################
-@run_async
+
 def new_group(update, context):
     for user in update.message.new_chat_members:
         if user.username == "WGtransparencybot":
@@ -89,7 +89,6 @@ def new_group(update, context):
             save_group(update, context)
 
 
-@run_async
 def save_group(update, context):
     print("BOT: --- SAVE GROUP INFO ---")
     # GET GROUP INFORMATION
@@ -134,7 +133,6 @@ def edit_group(update, context):
     print("BOT: --- EDIT GROUP INFO ---")
 
 
-@run_async
 def category(update, context):
     print("BOT: --- CATEGORY ---")
     query = update.callback_query
@@ -152,10 +150,10 @@ def category(update, context):
     markup = group_menu(["Africa", "Asia", "North America", "South America", "Oceania", "Europe", "Global"], [
         database.trelloc.regions['Africa'],
         database.trelloc.regions['Asia'],
-        database.trelloc.regions['Europe'],
-        database.trelloc.regions['South America'],
         database.trelloc.regions['North America'],
+        database.trelloc.regions['South America'],
         database.trelloc.regions['Oceania'],
+        database.trelloc.regions['Europe'],
         database.trelloc.regions['Global']], 2)
     print("BOT - CATEGORY: Created Markup")
     # EDIT MESSAGE TEXT AND MARKUP -  REQUEST REGION
@@ -164,7 +162,6 @@ def category(update, context):
     return REGION
 
 
-@run_async
 def region(update, context):
     print("BOT: --- LEVEL ---")
     query = update.callback_query
@@ -190,7 +187,6 @@ def region(update, context):
     return RESTRICTION
 
 
-@run_async
 def restriction(update, context):
     print("BOT: --- RESTRICTION ---")
     query = update.callback_query
@@ -213,7 +209,6 @@ def restriction(update, context):
     return IS_SUBGROUP
 
 
-@run_async
 def is_subgroup(update, context):
     print("BOT: --- IS SUBGROUP ---")
     query = update.callback_query
@@ -257,7 +252,6 @@ def is_subgroup(update, context):
         return PURPOSE
 
 
-@run_async
 def parent_group(update, context):
     print("BOT: --- PARENT GROUP ---")
     query = update.callback_query
@@ -287,7 +281,6 @@ def parent_group(update, context):
         return PURPOSE
 
 
-@run_async
 def purpose(update, context):
     print("BOT: --- PURPOSE ---")
     global add_group_message
@@ -322,7 +315,6 @@ def purpose(update, context):
         return ONBOARDING
 
 
-@run_async
 @send_typing_action
 def onboarding(update, context):
     print("BOT: --- ONBOARDING ---")
@@ -350,35 +342,28 @@ def onboarding(update, context):
 
 
 # GROUP UTILS ----------------------------------------
-@run_async
+
 def group_menu(button_titles, callbacks, cols=1):
+    print("BOT: group_menu()")
     keyboard = []
     index = 0
     row = []
     for title in button_titles:
-        print("BOT: Index - Title: " + title +
-              " | Callback: ", callbacks[index])
         keyboard_button = InlineKeyboardButton(
             title, callback_data=callbacks[index])
         if len(row) < cols:
             row.append(keyboard_button)
-            print("BOT: Row - ", row)
         else:
             keyboard.append(row)
-            print("BOT: Keyboard - ", keyboard)
             row = []
             row.append(keyboard_button)
-            print("BOT: Row - ", row)
         index += 1
     if row != "":
         keyboard.append(row)
-    print("BOT: Keyboard: ", keyboard)
-
     markup = InlineKeyboardMarkup(keyboard)
     return markup
 
 
-@run_async
 def subgroup_menu(first_index, direction, size=5):
     values = database.rotate_groups(
         first_index=first_index, direction=direction, size=size)
@@ -402,7 +387,6 @@ def subgroup_menu(first_index, direction, size=5):
     return markup
 
 
-@run_async
 def save_group_info(chat):
     # GROUP SAVING: Chat id, Title, Admins, Category, Region, Restrictions, is_subgroup,  parentgroup, purpose, onboarding
     print("BOT: --- SAVE GROUP INFO ---")
@@ -426,7 +410,6 @@ def save_group_info(chat):
 ####################### DELETE GROUP FUNCTIONS ##############################
 
 
-@run_async
 def delete_group(update, context):
     print("BOT: --- DELETE GROUP ---")
     user = update.message.from_user
@@ -463,7 +446,6 @@ def delete_group(update, context):
         return ConversationHandler.END
 
 
-@run_async
 def confirm_delete_group(update, context):
     print("BOT: --- CONFIRM DELETE GROUP ---")
     if update.callback_query.from_user.id != global_user_id:
@@ -489,7 +471,6 @@ def confirm_delete_group(update, context):
         print("BOT: Error in Query data in Confirm Delete Group")
 
 
-@run_async
 @send_typing_action
 def double_confirm_delete_group(update, context):
     print("BOT: --- DOUBLE CONFIRM DELETE GROUP ---")
@@ -517,7 +498,6 @@ def double_confirm_delete_group(update, context):
 ####################### CALL CONVERSATION FUNCTIONS #########################
 
 
-@run_async
 @send_typing_action
 def new_call(update, context):
     message = update.message
@@ -608,7 +588,6 @@ def edit_argument(update, context):
     print("EDIT ARGUMENT")
 
 
-@run_async
 @send_typing_action
 def add_title(update, context):
     print("ADD CALL TITLE")
@@ -636,7 +615,6 @@ def add_title(update, context):
         return CALL_DETAILS
 
 
-@run_async
 @send_typing_action
 def add_date(update, context):
     if update.message.from_user.id != global_user_id:
@@ -676,7 +654,6 @@ def add_date(update, context):
         return CALL_DETAILS
 
 
-@run_async
 @send_typing_action
 def add_time(update, context):
     if update.message.from_user.id != global_user_id:
@@ -723,7 +700,7 @@ def cancel_call(update, context):
 
 
 def error(update, context):
-    logger.warning('Update "%s" caused error "%s"', update, context.error)
+    logger.warning('BOT: Update caused error: "%s"', context.error)
 
 
 def format_input_argument(update, state, argument_title, missing, index):
@@ -781,7 +758,7 @@ def save_call_info(update, context, title, date, time, duration, description="",
 
 def main():
     # - COMMENT WHEN DEPLOYING TO HEROKU
-    TOKEN = os.environ.get('TOKEN')
+    TOKEN = settings.get_var('BOT_TOKEN')
     updater = Updater(token=TOKEN, use_context=True)
     dp = updater.dispatcher
 

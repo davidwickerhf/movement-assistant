@@ -4,7 +4,7 @@ import pickle
 import os
 import json
 from datetime import datetime, timedelta
-from modules import utils
+from modules import utils, settings
 from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 from google.auth.transport.requests import Request
@@ -12,7 +12,7 @@ from google.auth.transport.requests import Request
 if not (os.path.isfile('fff_automation/secrets/calendar_token.pkl') and os.path.getsize('fff_automation/secrets/calendar_token.pkl') > 0):
     scope = ['https://www.googleapis.com/auth/calendar']
     # CREDENTIALS HAVE NOT BEEN INITIALIZED BEFORE
-    client_secret = os.environ.get('CLIENT_SECRET')
+    client_secret = os.environ('CLIENT_SECRET')
     if client_secret != None:
         # CODE RUNNING ON SERVER
         client_secret_dict = json.loads(client_secret)
@@ -69,7 +69,7 @@ def add_event(date, time, duration, title, description, group, color):
         'colorId': str(color),
     }
 
-    calendar_id = os.environ.get(key='CALENDAR_ID', default='primary')
+    calendar_id = settings.get_var(key='CALENDAR_ID', default='primary')
     saved_event = service.events().insert(calendarId=calendar_id, body=event,
                                           sendNotifications=True).execute()
     url = saved_event.get('htmlLink')
@@ -78,6 +78,6 @@ def add_event(date, time, duration, title, description, group, color):
 
 
 def delete_event(event_id):
-    calendar_id = os.environ.get(key='CALENDAR_ID', default='primary')
+    calendar_id = settings.get_var(key='CALENDAR_ID', default='primary')
     print("CALENDAR: Delete Event: Id: ", event_id)
     service.events().delete(calendarId=calendar_id, eventId=event_id).execute()

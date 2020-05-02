@@ -5,10 +5,10 @@ import pickle
 from oauth2client.service_account import ServiceAccountCredentials
 from modules import gcalendar
 from modules import trelloc
-from setup import set_env
+from modules import settings
 from modules import utils
 
-if not (os.path.isfile('fff_automatio/secrets/sheet_token.pkl') and os.path.getsize('fff_automatio/secrets/sheet_token.pkl') > 0):
+if not (os.path.isfile('fff_automation/secrets/sheet_token.pkl') and os.path.getsize('fff_automation/secrets/sheet_token.pkl') > 0):
     # use creds to create a client to interact with the Google Drive API
     scope = [
         'https://spreadsheets.google.com/feeds',
@@ -16,11 +16,11 @@ if not (os.path.isfile('fff_automatio/secrets/sheet_token.pkl') and os.path.gets
         'https://www.googleapis.com/auth/drive.file',
         'https://www.googleapis.com/auth/drive']
     # CREDENTIALS HAVE NOT BEEN INITIALIZED BEFORE
-    client_secret = os.environ.get('CLIENT_SECRET')
+    client_secret = os.environ('CLIENT_SECRET')
     if client_secret == None:
         # CODE RUNNING LOCALLY
         print('DATABASE: Resorted to local JSON file')
-        with open('secrets/client_secret.json') as json_file:
+        with open('fff_automation/secrets/client_secret.json') as json_file:
             client_secret_dict = json.load(json_file)
     else:
         # CODE RUNNING ON SERVER
@@ -29,16 +29,18 @@ if not (os.path.isfile('fff_automatio/secrets/sheet_token.pkl') and os.path.gets
 
     creds = ServiceAccountCredentials.from_json_keyfile_dict(
         client_secret_dict, scope)
-    pickle.dump(creds, open('fff_automatio/secrets/sheet_token.pkl', 'wb'))
+    pickle.dump(creds, open('fff_automation/secrets/sheet_token.pkl', 'wb'))
 
-creds = pickle.load(open("fff_automatio/secrets/sheet_token.pkl", "rb"))
+creds = pickle.load(open("fff_automation/secrets/sheet_token.pkl", "rb"))
 client = gspread.authorize(creds)
 
 # IF NO SPREADSHEET ENV VARIABLE HAS BEEN SET, SET UP NEW SPREADSHEET
-if os.environ.get('SPREADSHEET') == "" or None or "insert_here_if_available":
-    set_env.set_database(client)
+if settings.get_var('SPREADSHEET') == -1:
+    print("DATABASE: Create new database")
+    settings.set_database(client)
+print("DATABASE: id == ", settings.get_var('SPREADSHEET'))
 
-SPREADSHEET = os.environ.get('SPREADSHEET')
+SPREADSHEET = settings.get_var('SPREADSHEET')
 spreadsheet = client.open_by_key(SPREADSHEET)
 groupchats = spreadsheet.get_worksheet(0)
 archive = spreadsheet.get_worksheet(1)
@@ -215,6 +217,7 @@ def save_call(message_id, chat_id, title, date, time, user_id, duration, descrip
 
 
 def find_row_by_id(sheet=groupchats, item_id="", col=1):
+    print("DATABASE: find_row_by_id()")
     if(sheet == "groups"):
         sheet = groupchats
     elif(sheet == "calls"):
@@ -224,13 +227,10 @@ def find_row_by_id(sheet=groupchats, item_id="", col=1):
     column = sheet.col_values(col)
     rows = []
     for num, cell in enumerate(column):
-        print("DATABASE FIND ID: ", cell, " | ", item_id)
         if str(cell) == str(item_id):
             rows.append(num+1)
-            print("DATABASE: Found group at row ", num+1)
             # need to remove child parent info now
     if rows == []:
-        print("DATABASE FIND ID: No Matching field found")
         rows.append(-1)
     return rows
 
