@@ -4,16 +4,6 @@ import gspread
 import requests
 import json
 
-if os.environ.get('PORT') in (None, ""):
-    # CODE IS RUN LOCALLY
-    LOCAL = True
-    print("BOT: Code running locally")
-else:
-    # CODE IS RUN ON SERVER
-    set_enviroment()
-    LOCAL = False
-    print("BOT: Code running on server")
-
 # IMPORTANT NOTICE
 # The correct functionality of the labels depends on these variables and on the label_order variable.
 # The latter must reflect the order of the labels in the Trello Board
@@ -241,3 +231,14 @@ def set_database(client):
     spreadsheet.share(value=get_var('GDRIVE_EMAIL'),
                       perm_type="user", role="owner")
     print("SETTINGS: Shared Spreadsheet with ", get_var('GDRIVE_EMAIL'))
+
+
+if os.environ.get('PORT') in (None, ""):
+    # CODE IS RUN LOCALLY
+    LOCAL = True
+    print("BOT: Code running locally")
+else:
+    # CODE IS RUN ON SERVER
+    set_enviroment()
+    LOCAL = False
+    print("BOT: Code running on server")
