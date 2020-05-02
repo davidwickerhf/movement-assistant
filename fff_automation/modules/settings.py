@@ -14,6 +14,7 @@ TL_INFORMATION, TL_PLANNEDCALLS, TL_DG, TL_WG, TL_IP, TL_PASTCALLS, TL_ARCHIVE, 
     19)
 label_order = ['UPCOMING', 'CLOSED', 'RESTRICTED', 'OPEN', 'AFRICA', 'ASIA',
                'EUROPE', 'GLOBAL', 'NORTH AMERICA', 'OCEANIA', 'PAST', 'SOUTH AMERICA']
+global LOCAL
 
 
 def get_var(key, parent="", default=""):
@@ -58,6 +59,7 @@ def set_var(key, value):
 
 def set_enviroment():
     variables = {}
+    variables['SERVER_APP_DOMAIN'] = os.environ.get('SERVER_APP_DOMAIN')
     variables['TRELLO_KEY'] = os.environ.get('TRELLO_KEY')
     variables['TRELLO_TOKEN'] = os.environ.get('TRELLO_TOKEN')
     variables['BOT_TOKEN'] = os.environ.get('BOT_TOKEN')
@@ -75,6 +77,8 @@ def set_enviroment():
                 print("SETTINGS: NO TRELLO BOARD ID FOUND -  CREATING NEW BOARD")
             else:
                 print("SETTINGS: {} IS NOT SET AS ENVIROMENT VARIABLE ON YOUR SERVER -> THIS WILL CAUSE AN ERROR FURTHER IN THE CODE\n Please set a condig variable named {} in your server".format(key, key))
+            if key == 'SERVER_APP_DOMAIN' and LOCAL == False:
+                print("SETTINGS: NO SERVER APP DOMAIN FOUND - THIS CONFIG VAR IS NECESSARY WHEN RUNNING THE CODE ON A SERVER.\nPlease set such value as config var on your server before running the code, or the code might crash.")
         else:
             save[key] = variables.get(key)
 

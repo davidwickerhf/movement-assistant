@@ -37,6 +37,7 @@ After you fork and clone the development repository, you need to follow the step
 > If no such file is present in the secrets folder, create a new env_variables.json file (make sure the filename is exactly that) and insert the code below, pasting the different tokens/variables instead of insert_here:
 ```
 {
+    "SERVER_APP_DOMAIN": "insert_here"
     "TRELLO_KEY": "insert_here",
     "TRELLO_TOKEN": "insert_here",
     "BOT_TOKEN": "insert_here",
@@ -46,6 +47,8 @@ After you fork and clone the development repository, you need to follow the step
     "TRELLO_BOARD_ID": "insert_here_if_available"
   }
 ```
+- SERVER APP DOMAIN (The url that will be used as webhook to receive POST requests from the Telegram API)
+> Insert a value in SERVER APP DOMAIN only if you are running the code on a server like Heroku
 - TRELLO KEY
 - TRELLO TOKEN
 - TELEGRAM BOT TOKEN

@@ -754,12 +754,12 @@ def main():
     updater = Updater(token=TOKEN, use_context=True)
     dp = updater.dispatcher
 
-    if not settings.LOCAL:
+    if settings.LOCAL == False:
         # CODE IS RUN ON SERVER
         PORT = int(os.environ.get('PORT', '5000'))
         updater.start_webhook(listen="0.0.0.0", port=PORT, url_path=TOKEN)
-        updater.bot.set_webhook(
-            "https://fff-transparency-wg.herokuapp.com/" + TOKEN)
+        updater.bot.set_webhook(settings.get_var(
+            key='SERVER_APP_DOMAIN') + TOKEN)
 
     # Commands
     #dp.add_handler(MessageHandler(Filters.status_update.new_chat_members, new_group))
