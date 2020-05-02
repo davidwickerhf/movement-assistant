@@ -8,19 +8,9 @@ from functools import wraps
 import json
 import logging
 import os
+from modules import settings
 from modules import utils
 from modules import database
-from modules import settings
-
-if os.environ.get('PORT') in (None, ""):
-    # CODE IS RUN LOCALLY
-    local = True
-    print("BOT: Code running locally")
-else:
-    # CODE IS RUN ON SERVER
-    settings.set_enviroment()
-    local = False
-    print("BOT: Code running on server")
 
 
 logging.basicConfig(
@@ -764,7 +754,7 @@ def main():
     updater = Updater(token=TOKEN, use_context=True)
     dp = updater.dispatcher
 
-    if not local:
+    if not settings.LOCAL:
         # CODE IS RUN ON SERVER
         PORT = int(os.environ.get('PORT', '5000'))
         updater.start_webhook(listen="0.0.0.0", port=PORT, url_path=TOKEN)
@@ -818,7 +808,7 @@ def main():
     dp.add_handler(delete_group_handler)
     dp.add_error_handler(error)
 
-    if local:
+    if settings.LOCAL:
         updater.start_polling()
     updater.idle()
 

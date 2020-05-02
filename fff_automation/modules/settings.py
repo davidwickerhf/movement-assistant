@@ -4,6 +4,16 @@ import gspread
 import requests
 import json
 
+if os.environ.get('PORT') in (None, ""):
+    # CODE IS RUN LOCALLY
+    LOCAL = True
+    print("BOT: Code running locally")
+else:
+    # CODE IS RUN ON SERVER
+    set_enviroment()
+    LOCAL = False
+    print("BOT: Code running on server")
+
 # IMPORTANT NOTICE
 # The correct functionality of the labels depends on these variables and on the label_order variable.
 # The latter must reflect the order of the labels in the Trello Board
@@ -66,6 +76,7 @@ def set_enviroment():
     variables['SPREADSHEET'] = os.environ.get('SPREADSHEET')
     variables['TRELLO_BOARD_ID'] = os.environ.get('TRELLO_BOARD_ID')
 
+    save = {}
     for key in variables:
         if variables.get(key) in (None, ''):
             if key == 'SPREADSHEET':
@@ -74,11 +85,22 @@ def set_enviroment():
                 print("SETTINGS: NO TRELLO BOARD ID FOUND -  CREATING NEW BOARD")
             else:
                 print("SETTINGS: {} IS NOT SET AS ENVIROMENT VARIABLE ON YOUR SERVER -> THIS WILL CAUSE AN ERROR FURTHER IN THE CODE\n Please set a condig variable named {} in your server".format(key, key))
+        else:
+            save[key] = variables.get(key)
+
+    if os.path.isfile('fff_automation/secrets/env_variables.json') and os.path.getsize('fff_automation/secrets/env_variables.json') > 0:
+        with open('fff_automation/secrets/env_variables.json', 'r') as json_file:
+            existing_vars = json.load(json_file)
+        for key in save:
+            if key in existing_vars:
+                del existing_vars[key]
+                existing_vars[key] = save[key]
+
     if os.environ.get('CLIENT_SECRET') in (None, ''):
         print("SETTINGS: CLIENT SECRET IS NOT SET AS CONFIG VARIABLE IN YOUR SERVER. THIS WILL NOT ALLOW THE PROGRAM TO ACCESS THE DATABASE AND WILL CAUSE AN ERROR")
 
-    with open('fff_automation/secrets/env_variables.json', 'w'):
-        json.dump(variables)
+    with open('fff_automation/secrets/env_variables.json', 'w') as output_file:
+        json.dump(variables, output_file)
 
 
 def set_trello(client, key, token):
@@ -102,7 +124,6 @@ def set_trello(client, key, token):
     except:
         print(
             "SETTINGS: Board could not be created. User might have too many Boards already")
-
     set_var('TRELLO_BOARD_ID', str(board_id))
     # Delete existing lists
     board = client.get_board(board_id=board_id)
