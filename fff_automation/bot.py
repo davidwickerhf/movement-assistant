@@ -17,6 +17,8 @@ if os.environ.get('PORT') in (None, ""):
     local = True
     print("BOT: Code running locally")
 else:
+    # CODE IS RUN ON SERVER
+    settings.set_enviroment()
     local = False
     print("BOT: Code running on server")
 

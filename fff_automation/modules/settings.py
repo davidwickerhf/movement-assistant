@@ -56,6 +56,31 @@ def set_var(key, value):
     print("SETTINGS: Set variable ", key)
 
 
+def set_enviroment():
+    variables = {}
+    variables['TRELLO_KEY'] = os.environ.get('TRELLO_KEY')
+    variables['TRELLO_TOKEN'] = os.environ.get('TRELLO_TOKEN')
+    variables['BOT_TOKEN'] = os.environ.get('BOT_TOKEN')
+    variables['CALENDAR_ID'] = os.environ.get('CALENDAR_ID')
+    variables['GDRIVE_EMAIL'] = os.environ.get('GDRIVE_EMAIL')
+    variables['SPREADSHEET'] = os.environ.get('SPREADSHEET')
+    variables['TRELLO_BOARD_ID'] = os.environ.get('TRELLO_BOARD_ID')
+
+    for key in variables:
+        if variables.get(key) in (None, ''):
+            if key == 'SPREADSHEET':
+                print("SETTINGS: NO DATABASE FOUND - CREATING NEW SPREADSHEET")
+            elif key == 'TRELLO_BOARD_ID':
+                print("SETTINGS: NO TRELLO BOARD ID FOUND -  CREATING NEW BOARD")
+            else:
+                print("SETTINGS: {} IS NOT SET AS ENVIROMENT VARIABLE ON YOUR SERVER -> THIS WILL CAUSE AN ERROR FURTHER IN THE CODE\n Please set a condig variable named {} in your server".format(key, key))
+    if os.environ.get('CLIENT_SECRET') in (None, ''):
+        print("SETTINGS: CLIENT SECRET IS NOT SET AS CONFIG VARIABLE IN YOUR SERVER. THIS WILL NOT ALLOW THE PROGRAM TO ACCESS THE DATABASE AND WILL CAUSE AN ERROR")
+
+    with open('fff_automation/secrets/env_variables.json', 'w'):
+        json.dump(variables)
+
+
 def set_trello(client, key, token):
     """
     Setup Trello Board if none exists yet.
