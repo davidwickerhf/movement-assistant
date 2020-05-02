@@ -12,7 +12,7 @@ from google.auth.transport.requests import Request
 if not (os.path.isfile('fff_automation/secrets/calendar_token.pkl') and os.path.getsize('fff_automation/secrets/calendar_token.pkl') > 0):
     scope = ['https://www.googleapis.com/auth/calendar']
     # CREDENTIALS HAVE NOT BEEN INITIALIZED BEFORE
-    client_secret = os.environ('CLIENT_SECRET')
+    client_secret = os.environ.get('CLIENT_SECRET')
     if client_secret != None:
         # CODE RUNNING ON SERVER
         client_secret_dict = json.loads(client_secret)

@@ -16,7 +16,7 @@ if not (os.path.isfile('fff_automation/secrets/sheet_token.pkl') and os.path.get
         'https://www.googleapis.com/auth/drive.file',
         'https://www.googleapis.com/auth/drive']
     # CREDENTIALS HAVE NOT BEEN INITIALIZED BEFORE
-    client_secret = os.environ('CLIENT_SECRET')
+    client_secret = os.environ.get('CLIENT_SECRET')
     if client_secret == None:
         # CODE RUNNING LOCALLY
         print('DATABASE: Resorted to local JSON file')
