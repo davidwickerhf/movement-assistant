@@ -1,1 +1,1 @@
-web: gunicorn fff_automation/app:app
+web: gunicorn app:app

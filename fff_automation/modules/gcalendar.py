@@ -4,7 +4,7 @@ import pickle
 import os
 import json
 from datetime import datetime, timedelta
-from modules import utils, settings
+from fff_automation.modules import utils, settings
 from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 from google.auth.transport.requests import Request

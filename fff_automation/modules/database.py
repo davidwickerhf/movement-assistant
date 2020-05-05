@@ -3,10 +3,10 @@ import os
 import json
 import pickle
 from oauth2client.service_account import ServiceAccountCredentials
-from modules import gcalendar
-from modules import trelloc
-from modules import settings
-from modules import utils
+from fff_automation.modules import gcalendar
+from fff_automation.modules import trelloc
+from fff_automation.modules import settings
+from fff_automation.modules import utils
 
 if not (os.path.isfile('fff_automation/secrets/sheet_token.pkl') and os.path.getsize('fff_automation/secrets/sheet_token.pkl') > 0):
     # use creds to create a client to interact with the Google Drive API

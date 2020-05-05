@@ -1,6 +1,6 @@
 from flask import Flask, request
-from modules import settings
-from bots import telebot
+from fff_automation.modules import settings
+from fff_automation.bots import telebot
 import telegram
 
 global teleTOKEN

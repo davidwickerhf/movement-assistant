@@ -8,9 +8,9 @@ from functools import wraps
 import json
 import logging
 import os
-from modules import settings
-from modules import utils
-from modules import database
+from fff_automation.modules import settings
+from fff_automation.modules import utils
+from fff_automation.modules import database
 
 
 logging.basicConfig(
