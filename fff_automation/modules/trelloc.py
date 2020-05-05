@@ -1,7 +1,7 @@
 import os
 import emoji
 from trello import TrelloClient
-from modules import settings
+from fff_automation.modules import settings
 
 
 TRELLO_KEY = settings.get_var('TRELLO_KEY')
