@@ -10,7 +10,7 @@ To develop for this bot, add pull requests to the Development Branch.
 
 After you fork and clone the development repository, you need to follow the steps below to be able to run the code on your local machine:
 
-### Setup Google API tokens:
+### 1 - Setup Google API tokens:
 - Create a Google Console Project at [Google API Console](https://console.developers.google.com/apis/credentials?project=bot-testing-273208&authuser=1)
 - Enable the Calendar, Drive and Sheets APIs from the API Library
 - Create a service account
@@ -25,15 +25,15 @@ After you fork and clone the development repository, you need to follow the step
   - Select JSON key type and hit continue
 - Download the generated key as "client_secret.json" and place it in the [Secrets](secrets) folder of your local cloned repository. 
 > Make sure all the files in the secrets folder are always included in the [.gitignore](.gitignore). They should already be inserted, but always check before committing the code to a git repository.
-### Setup Trello Tokens and Keys
+### 2 - Setup Trello Tokens and Keys
 - Get the Trello Key from https://trello.com/app-key
 - Get the Trello Token from https://trello.com/app-key as local testing
-### Setup Telegram Bot
+### 3 - Setup Telegram Bot
 - Create a Telegram bot with @BotFather
 - Get the generated Token
-### Share a designated calendar
+### 4 - Share a designated calendar
 - Share a designated calendar you are owner of to the email address of the Service Account you created when enabling the Google APIs. Make sure to give permission to make changes and manage sharing. The Service Account email address can also be found in your newly generated client_secret.json
-### Paste the tokens/keys you obtained in the [set_env.py](secrets/env_variables.json) file
+### 5 - Paste the tokens/keys you obtained in the [set_env.py](secrets/env_variables.json) file
 > If no such file is present in the secrets folder, create a new env_variables.json file (make sure the filename is exactly that) and insert the code below, pasting the different tokens/variables instead of insert_here:
 ```
 {
@@ -41,6 +41,7 @@ After you fork and clone the development repository, you need to follow the step
     "TRELLO_KEY": "insert_here",
     "TRELLO_TOKEN": "insert_here",
     "BOT_TOKEN": "insert_here",
+    "BOT_USERNAME": "insert_here",
     "CALENDAR_ID": "insert_here",
     "GDRIVE_EMAIL": "insert_here",
     "SPREADSHEET": "insert_here_if_available",
@@ -52,11 +53,12 @@ After you fork and clone the development repository, you need to follow the step
 - TRELLO KEY
 - TRELLO TOKEN
 - TELEGRAM BOT TOKEN
+- TELEGRAM BOT USERNAME
 - GCALENDAR ID (this is either id of the calendar, which is found in the "Integrate Calendar" section of the settings of the calendar you want to access)
 - G DRIVE EMAIL (The email you want the database to be shared with)
 - SPREADSHEET (the Id of the database spreadsheet. This field should be left empty: "", if you don't have a correctly formatted database sheet yet)
 - TRELLO_BOARD_ID (This field should be left empty: "", if you don't have a correctly formatted Trello Board yet))
-### Setup virtual enviroment
+### 6 - Setup virtual enviroment
 - Open your comand prompt
 - create a python virtual enviroemnt in the folder you have cloned the repository to
 - activate the enviroment
@@ -64,6 +66,15 @@ After you fork and clone the development repository, you need to follow the step
 ```
 pip install -r requirements.txt
 ```
+### 7 - Running the program on an online server
+This part is optional. In case you decide to upload the code on an online server, please undergo the further steps below:
+- Add all the enviroment variables (set in step 5) as configuration variables for your server
+> Don't add the variables 'TRELLO_BOARD_ID' and 'SPREADSHEET' unless you have both the Trello Board and Spreadsheet database set up correctly. If you don't insert these variables, the program will proceed to create a new board and a new spreadsheet for you. If you insert custom values for these variables without having setup the board/spreadsheet correctly, the program might crash.
+- Add your client secret as configuration variable for your server and name it 'CLIENT_SECRET'
+> DO NOT UPLOAD YOUR client_secret.json TO AN ONLINE SERVER. Make sure that file is always included in the .gitignore file.
+> To add your client secret as config variable, see [fff_automation/setup/clean_json.py](fff_automation/setup/clean_json.py). You'll need to copy the values of your client secret and paste it in the file above following the instructions. Then, run the script locally and it will return the client secret formatted correctly into a string, which you can paste as config variable onto your server.
 
-There you go! Now run the [bot.py](bot.py) file and check if everything is working fine. If you encounter any errors, feel free to add the procedure you undertook and the error code as an issue in the development branch of the repository, mentioning @davidwickerhf 
+
+There you go! Now run the [app.py](app.py) file and check if everything is working fine. If you encounter any errors, feel free to add the procedure you undertook and the error code as an issue in the development branch of the repository, mentioning @davidwickerhf 
+
 
