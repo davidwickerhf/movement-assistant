@@ -748,23 +748,16 @@ def save_call_info(update, context, title, date, time, duration, description="",
     print("Sent Reply")
 
 
-def main():
-    # - COMMENT WHEN DEPLOYING TO HEROKU
+def main(update=None):
     TOKEN = settings.get_var('BOT_TOKEN')
     updater = Updater(token=TOKEN, use_context=True)
     dp = updater.dispatcher
 
-    if settings.LOCAL == False:
-        # CODE IS RUN ON SERVER
-        PORT = int(os.environ.get('PORT', '5000'))
-        updater.start_webhook(listen="0.0.0.0", port=PORT, url_path=TOKEN)
-        updater.bot.set_webhook(settings.get_var(
-            key='SERVER_APP_DOMAIN') + TOKEN)
+    if update != None:
+        dp.update_queue.put(update)
 
     # Commands
-    #dp.add_handler(MessageHandler(Filters.status_update.new_chat_members, new_group))
     dp.add_handler(CommandHandler("help", help))
-    #dp.add_handler(CommandHandler("newgroup", save_group))
     group_handler = ConversationHandler(
         entry_points=[MessageHandler(
             Filters.status_update.new_chat_members, new_group), CommandHandler("newgroup", save_group)],
