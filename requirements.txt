@@ -9,6 +9,7 @@ cryptography==2.9
 dateparser==0.7.4
 decorator==4.4.2
 emoji==0.5.4
+Flask==1.1.2
 future==0.18.2
 google-api-python-client==1.7.9
 google-auth==1.13.1
@@ -16,6 +17,7 @@ google-auth-httplib2==0.0.3
 google-auth-oauthlib==0.4.0
 gspread==3.4.1
 gspread-formatting==0.2.1
+gunicorn==20.0.4
 httplib2==0.17.1
 idna==2.9
 itsdangerous==1.1.0
