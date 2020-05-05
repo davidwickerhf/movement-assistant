@@ -10,7 +10,7 @@ global telegram_bot
 teleTOKEN = settings.get_var('BOT_TOKEN')
 URL = settings.get_var('SERVER_APP_DOMAIN')
 telegram_bot = telegram.Bot(token=teleTOKEN)
-server = Flask(__name__)
+app = Flask(__name__)
 
 if settings.LOCAL == True:
     print("APP: Running locally, launching telegram bot without running Flask Server.")
@@ -19,7 +19,7 @@ else:
     print("APP: Running on server, launching Flask server.")
 
 
-@server.route('/{}'.format(teleTOKEN), methods=['POST'])
+@app.route('/{}'.format(teleTOKEN), methods=['POST'])
 def receive_update():
     update = telegram.Update.de_json(
         request.get_json(force=True), telegram_bot)
@@ -27,7 +27,7 @@ def receive_update():
     return 'ok'
 
 
-@server.route('/setwebhook', methods=['GET', 'POST'])
+@app.route('/setwebhook', methods=['GET', 'POST'])
 def set_webhook():
     # we use the bot object to link the bot to our app which live
     # in the link provided by URL
@@ -42,17 +42,17 @@ def set_webhook():
 
 
 # RECEIVE OTHER WEBHOOKS
-""" @server.route('/other_webhook_route', methods=['POST'])
+""" @app.route('/other_webhook_route', methods=['POST'])
 def receive_child_update(token):
     json_update = request.get_json(force=True)
     do_something(json_update)
     return 'ok' """
 
 
-@server.route('/')
+@app.route('/')
 def index():
     return '.'
 
 
 if __name__ == '__main__':
-    server.run(threaded=True)
+    app.run(threaded=True)
