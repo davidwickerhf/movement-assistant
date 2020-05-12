@@ -58,6 +58,7 @@ def set_var(key, value):
 
 
 def set_enviroment():
+    print("SETTINGS: Setting enviroment variables from server configs.")
     variables = {}
     variables['SERVER_APP_DOMAIN'] = os.environ.get('SERVER_APP_DOMAIN')
     variables['TRELLO_KEY'] = os.environ.get('TRELLO_KEY')

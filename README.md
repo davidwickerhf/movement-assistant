@@ -33,7 +33,7 @@ After you fork and clone the development repository, you need to follow the step
 - Get the generated Token
 ### 4 - Share a designated calendar
 - Share a designated calendar you are owner of to the email address of the Service Account you created when enabling the Google APIs. Make sure to give permission to make changes and manage sharing. The Service Account email address can also be found in your newly generated client_secret.json
-### 5 - Paste the tokens/keys you obtained in the [set_env.py](secrets/env_variables.json) file
+### 5 - Paste the tokens/keys you obtained in the [env_variables.json](secrets/env_variables.json) file
 > If no such file is present in the secrets folder, create a new env_variables.json file (make sure the filename is exactly that) and insert the code below, pasting the different tokens/variables instead of insert_here:
 ```
 {
