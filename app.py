@@ -17,6 +17,11 @@ if settings.LOCAL == True:
     telebot.main(None)
 else:
     print("APP: Running on server, launching Flask server.")
+    s = telegram_bot.setWebhook('{URL}{HOOK}'.format(URL=URL, HOOK=teleTOKEN))
+    if s:
+        print("APP: Webhook setup correctly")
+    else:
+        print("APP: Error in setting up webhook")
 
 
 @app.route('/{}'.format(teleTOKEN), methods=['POST'])
@@ -25,20 +30,6 @@ def receive_update():
         request.get_json(force=True), telegram_bot)
     telebot.main(update)
     return 'ok'
-
-
-@app.route('/setwebhook', methods=['GET', 'POST'])
-def set_webhook():
-    # we use the bot object to link the bot to our app which live
-    # in the link provided by URL
-    s = telegram_bot.setWebhook('{URL}{HOOK}'.format(URL=URL, HOOK=teleTOKEN))
-    # something to let us know things work
-    if s:
-        print("APP: Webhook setup correctly")
-        return "webhook setup ok"
-    else:
-        print("APP: Error in setting up webhook")
-        return "webhook setup failed"
 
 
 # RECEIVE OTHER WEBHOOKS
