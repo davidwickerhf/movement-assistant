@@ -17,7 +17,7 @@ label_order = ['UPCOMING', 'CLOSED', 'RESTRICTED', 'OPEN', 'AFRICA', 'ASIA',
 global LOCAL
 
 
-def get_var(key, parent="", default=""):
+def get_var(key="", parent="", default="", value=""):
     """
     Retrieve configuration variables from the env_variables.json file.
     :variable: String of the name of the variable you are retrieving (see env_variables.json)
@@ -25,7 +25,15 @@ def get_var(key, parent="", default=""):
     variables = {}
     with open('fff_automation/secrets/env_variables.json') as variables_file:
         variables = json.load(variables_file)
-    if parent == "":
+    if value != "":
+        if value in variables.values():
+            print("Value {} is in env_variables.json".format(value))
+            return True
+        else:
+            print("Value {} is NOT in env_variables.json".format(value))
+            return False
+
+    elif parent == "":
         requested = variables.get(str(key))
     else:
         requested = variables[parent][str(key)]
@@ -111,7 +119,7 @@ def set_trello(client, key, token):
     print("SETTINGS: token ", token)
     try:
         url = "https://api.trello.com/1/boards/"
-        querystring = {"name": "TRANSPARENCY BOARD",
+        querystring = {"name": "TESTING BOARD",
                        "key": key, "token": token}
         response = requests.request("POST", url, params=querystring)
         board_id = response.json()["shortUrl"].split("/")[-1].strip()
@@ -204,7 +212,7 @@ def set_database(client):
     :credentials: Credentials created in database.py
     """
     # CREATE SPREADSHEET
-    spreadsheet = client.create('DATABASE')
+    spreadsheet = client.create('TESTING DATABASE')
     set_var('SPREADSHEET', spreadsheet.id)
     print("SETTINGS: Created Spreadsheet")
 
@@ -238,12 +246,17 @@ def set_database(client):
     print("SETTINGS: Shared Spreadsheet with ", get_var('GDRIVE_EMAIL'))
 
 
-if os.environ.get('PORT') in (None, ""):
-    # CODE IS RUN LOCALLY
-    LOCAL = True
-    print("BOT: Code running locally")
-else:
-    # CODE IS RUN ON SERVER
-    set_enviroment()
-    LOCAL = False
-    print("BOT: Code running on server")
+try:
+    LOCAL
+    print("SETTINGS: Local Variable already defined.")
+except:
+    print("SETTINGS: Local variable is being initialized.")
+    if os.environ.get('PORT') in (None, ""):
+        # CODE IS RUN LOCALLY
+        LOCAL = True
+        print("BOT: Code running locally")
+    else:
+        # CODE IS RUN ON SERVER
+        set_enviroment()
+        LOCAL = False
+        print("BOT: Code running on server")
