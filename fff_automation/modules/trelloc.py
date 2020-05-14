@@ -23,9 +23,11 @@ else:
     # Cicle through the lists
     # Add the lists ids to the env. file
     print("TRELLOC: Initiating Config Vars. Board Exists")
+    # Get lists from Trello
     lists = client.get_board(
         board_id=settings.get_var('TRELLO_BOARD_ID')).all_lists()
     lists = lists[3:]
+
     lists_dict = {}
     for num, trellolist in enumerate(lists):
         lists_dict[num] = trellolist.id
