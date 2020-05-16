@@ -1,7 +1,9 @@
 from telegram.ext.conversationhandler import ConversationHandler
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, ReplyKeyboardMarkup, ChatAction
+from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, Filters, Dispatcher
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, ReplyKeyboardMarkup, ChatAction, Bot
 from telegram.ext.dispatcher import run_async
+from queue import Queue  # in python 2 it should be "from Queue"
+from threading import Thread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 from functools import wraps
@@ -11,7 +13,6 @@ import os
 from fff_automation.modules import settings
 from fff_automation.modules import utils
 from fff_automation.modules import database
-
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -58,30 +59,30 @@ def send_typing_action(func):
     """Sends typing action while processing func command."""
 
     @wraps(func)
-    def command_func(update, context, *args, **kwargs):
-        context.bot.send_chat_action(
+    def command_func(bot, update, *args, **kwargs):
+        bot.send_chat_action(
             chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
-        return func(update, context,  *args, **kwargs)
+        return func(bot, update,  *args, **kwargs)
 
     return command_func
 
 
-def help(update, context):
+def help(bot, update):
     update.message.chat.send_message(text=help_description.format(
         new_call_description, new_group_description), parse_mode=ParseMode.HTML)
 
 
 ######################## GROUP CONVERSATION FUNCTIONS #######################
 
-def new_group(update, context):
+def new_group(bot, update):
     for user in update.message.new_chat_members:
         if user.username == "WGtransparencybot":
             print("BOT: --- BOT ADDED IN GROUP ---")
             # LAUNCH SAVE GROUP DEF
-            save_group(update, context)
+            save_group(bot, update)
 
 
-def save_group(update, context):
+def save_group(bot, update):
     print("BOT: --- SAVE GROUP INFO ---")
     # GET GROUP INFORMATION
     chat = update.message.chat
@@ -117,15 +118,15 @@ def save_group(update, context):
         return ConversationHandler.END
 
 
-def group_info(update, context):
+def group_info(bot, update):
     print("BOT: --- GROUP INFO ---")
 
 
-def edit_group(update, context):
+def edit_group(bot, update):
     print("BOT: --- EDIT GROUP INFO ---")
 
 
-def category(update, context):
+def category(bot, update):
     print("BOT: --- CATEGORY ---")
     query = update.callback_query
     if update.callback_query.from_user.id != global_user_id:
@@ -154,7 +155,7 @@ def category(update, context):
     return REGION
 
 
-def region(update, context):
+def region(bot, update):
     print("BOT: --- LEVEL ---")
     query = update.callback_query
     if update.callback_query.from_user.id != global_user_id:
@@ -179,7 +180,7 @@ def region(update, context):
     return RESTRICTION
 
 
-def restriction(update, context):
+def restriction(bot, update):
     print("BOT: --- RESTRICTION ---")
     query = update.callback_query
     if update.callback_query.from_user.id != global_user_id:
@@ -201,7 +202,7 @@ def restriction(update, context):
     return IS_SUBGROUP
 
 
-def is_subgroup(update, context):
+def is_subgroup(bot, update):
     print("BOT: --- IS SUBGROUP ---")
     query = update.callback_query
     if update.callback_query.from_user.id != global_user_id:
@@ -244,7 +245,7 @@ def is_subgroup(update, context):
         return PURPOSE
 
 
-def parent_group(update, context):
+def parent_group(bot, update):
     print("BOT: --- PARENT GROUP ---")
     query = update.callback_query
     if update.callback_query.from_user.id != global_user_id:
@@ -273,7 +274,7 @@ def parent_group(update, context):
         return PURPOSE
 
 
-def purpose(update, context):
+def purpose(bot, update):
     print("BOT: --- PURPOSE ---")
     global add_group_message
     try:
@@ -308,7 +309,7 @@ def purpose(update, context):
 
 
 @send_typing_action
-def onboarding(update, context):
+def onboarding(bot, update):
     print("BOT: --- ONBOARDING ---")
     try:
         if update.message.from_user.id != global_user_id:
@@ -402,7 +403,7 @@ def save_group_info(chat):
 ####################### DELETE GROUP FUNCTIONS ##############################
 
 
-def delete_group(update, context):
+def delete_group(bot, update):
     print("BOT: --- DELETE GROUP ---")
     user = update.message.from_user
     group_id = update.message.chat.id
@@ -438,7 +439,7 @@ def delete_group(update, context):
         return ConversationHandler.END
 
 
-def confirm_delete_group(update, context):
+def confirm_delete_group(bot, update):
     print("BOT: --- CONFIRM DELETE GROUP ---")
     if update.callback_query.from_user.id != global_user_id:
         # USER DOES NOT HAVE PERMISSION TO DELETE BOT
@@ -464,7 +465,7 @@ def confirm_delete_group(update, context):
 
 
 @send_typing_action
-def double_confirm_delete_group(update, context):
+def double_confirm_delete_group(bot, update):
     print("BOT: --- DOUBLE CONFIRM DELETE GROUP ---")
     if update.callback_query.from_user.id != global_user_id:
         # USER DOES NOT HAVE PERMISSION TO DELETE BOT
@@ -491,7 +492,7 @@ def double_confirm_delete_group(update, context):
 
 
 @send_typing_action
-def new_call(update, context):
+def new_call(bot, update):
     message = update.message
     message_id = message.message_id
     groupchat = update.message.chat
@@ -564,24 +565,24 @@ def new_call(update, context):
             if argument == "":
                 argument = "N/A"
 
-        save_call_info(update=update, context=context, title=arguments[0], date=arguments[1], time=arguments[2],
+        save_call_info(bot=bot, update=update, title=arguments[0], date=arguments[1], time=arguments[2],
                        duration=arguments[3], description=arguments[4], agenda_link=arguments[5])
 
 
-def call_details(update, context):
+def call_details(bot, update):
     print("CALL DETAILS")
 
 
-def edit_call(update, context):
+def edit_call(bot, update):
     print("EDIT CALL")
 
 
-def edit_argument(update, context):
+def edit_argument(bot, update):
     print("EDIT ARGUMENT")
 
 
 @send_typing_action
-def add_title(update, context):
+def add_title(bot, update):
     print("ADD CALL TITLE")
     print("Getting user input")
     if update.message.from_user.id != global_user_id:
@@ -602,13 +603,13 @@ def add_title(update, context):
     else:
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
-        save_call_info(
-            update=update, context=context, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
+        save_call_info(bot=bot,
+                       update=update, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
         return CALL_DETAILS
 
 
 @send_typing_action
-def add_date(update, context):
+def add_date(bot, update):
     if update.message.from_user.id != global_user_id:
         return ADD_DATE
     print("ADD CALL DATE")
@@ -641,13 +642,13 @@ def add_date(update, context):
     else:
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
-        save_call_info(
-            update=update, context=context, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
+        save_call_info(bot=bot,
+                       update=update, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
         return CALL_DETAILS
 
 
 @send_typing_action
-def add_time(update, context):
+def add_time(bot, update):
     if update.message.from_user.id != global_user_id:
         return ADD_TIME
     print("ADD TIME")
@@ -661,8 +662,8 @@ def add_time(update, context):
         saving[2] = time
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
-        save_call_info(
-            update=update, context=context, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
+        save_call_info(bot=bot,
+                       update=update, title=saving[0], date=str(saving[1]), time=str(saving[2]), duration=saving[3])
         return ConversationHandler.END
     else:
         # INPUT IS INCORRECT
@@ -675,7 +676,7 @@ def add_time(update, context):
 
 
 @send_typing_action
-def cancel_call(update, context):
+def cancel_call(bot, update):
     try:
         if update.message.from_user.id != global_user_id:
             return
@@ -691,7 +692,7 @@ def cancel_call(update, context):
     return ConversationHandler.END
 
 
-def error(update, context):
+def error(bot, update):
     logger.warning('BOT: Update caused error: "%s"', context.error)
 
 
@@ -716,7 +717,7 @@ def format_input_argument(update, state, argument_title, missing, index):
 
 
 @send_typing_action
-def save_call_info(update, context, title, date, time, duration, description="", agenda_link=""):
+def save_call_info(bot, update, title, date, time, duration, description="", agenda_link=""):
     global add_call_message
     add_call_message.delete()
     username = update.message.from_user.username
@@ -748,13 +749,10 @@ def save_call_info(update, context, title, date, time, duration, description="",
     print("Sent Reply")
 
 
-def main(update=None):
-    TOKEN = settings.get_var('BOT_TOKEN')
-    updater = Updater(token=TOKEN, use_context=True)
-    dp = updater.dispatcher
-
-    if update != None:
-        dp.update_queue.put(update)
+def setup(token):
+    bot = Bot(token)
+    update_queue = Queue()
+    dp = Dispatcher(bot, update_queue)
 
     # Commands
     dp.add_handler(CommandHandler("help", help))
@@ -801,10 +799,10 @@ def main(update=None):
     dp.add_handler(delete_group_handler)
     dp.add_error_handler(error)
 
-    if settings.LOCAL:
-        updater.start_polling()
-    updater.idle()
+    thread = Thread(target=dp.start, name='dispatcher')
+    thread.start()
+
+    return update_queue
 
 
-if __name__ == '__main__':
-    main()
+update_queue = setup(settings.get_var('BOT_TOKEN'))

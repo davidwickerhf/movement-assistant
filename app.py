@@ -3,6 +3,7 @@ from fff_automation.modules import settings
 from fff_automation.bots import telebot
 import telegram
 
+# SETUP TELEGRAM BOT
 global teleTOKEN
 global URL
 global telegram_bot
@@ -10,25 +11,22 @@ global telegram_bot
 teleTOKEN = settings.get_var('BOT_TOKEN')
 URL = settings.get_var('SERVER_APP_DOMAIN')
 telegram_bot = telegram.Bot(token=teleTOKEN)
+
 app = Flask(__name__)
 
-if settings.LOCAL == True:
-    print("APP: Running locally, launching telegram bot without running Flask Server.")
-    telebot.main(None)
+s = telegram_bot.setWebhook('{URL}{HOOK}'.format(URL=URL, HOOK=teleTOKEN))
+if s:
+    print("APP: Webhook setup correctly")
 else:
-    print("APP: Running on server, launching Flask server.")
-    s = telegram_bot.setWebhook('{URL}{HOOK}'.format(URL=URL, HOOK=teleTOKEN))
-    if s:
-        print("APP: Webhook setup correctly")
-    else:
-        print("APP: Error in setting up webhook")
+    print("APP: Error in setting up webhook")
 
 
 @app.route('/{}'.format(teleTOKEN), methods=['POST'])
 def receive_update():
+    print("APP: Received Update")
     update = telegram.Update.de_json(
         request.get_json(force=True), telegram_bot)
-    telebot.main(update)
+    telebot.update_queue.put(update)
     return 'ok'
 
 
