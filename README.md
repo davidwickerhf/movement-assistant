@@ -69,7 +69,7 @@ pip install -r requirements.txt
 ```
 ### 7a - Running the program on your local machine
 The program requires a server connected to the internet to run. To achive that you can either run the program on an online server or you can run the program on your local machine and use ngrok to connect to the internet.
-- Install NGROK [https://ngrok.com/download](Download here)
+- Install NGROK [Download here](https://ngrok.com/download)
 - Unzip the downaloaded folder
 - Open your command prompt
 - Navigate to the folder where the ngrok.exe is located (Use cd on windows)
@@ -77,8 +77,8 @@ The program requires a server connected to the internet to run. To achive that y
 ```
 ngrok http 5000
 ```
-- Copy the https link next to "Forwarding" and paste it as SERVER APP DOMAIN in [secrets/env_variables.json](env_variables.json).
-> Make sure that the ngrok link includes the '/' at the end of it - otherwise the program won't work.
+- Copy the https link next to "Forwarding" and paste it as SERVER APP DOMAIN in [env_variables.json](fff_automation/secrets/env_variables.json).
+> Make sure to copy the HTTPS link (not the HTTP one) and that the ngrok link includes the '/' at the end of it - otherwise the program won't work.
 ### 7b - Running the program on an online server
 This part is optional. In case you decide to upload the code on an online server, please undergo the further steps below:
 - Add all the enviroment variables (set in step 5) as configuration variables for your server
