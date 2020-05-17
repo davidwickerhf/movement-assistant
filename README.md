@@ -50,6 +50,7 @@ After you fork and clone the development repository, you need to follow the step
 ```
 - SERVER APP DOMAIN (The url that will be used as webhook to receive POST requests from the Telegram API)
 > Insert a value in SERVER APP DOMAIN only if you are running the code on a server like Heroku
+- SERVER APP DOMAIN (this is the link to the server your app is running on. It can also be a ngrok link if you are running the app locally.)
 - TRELLO KEY
 - TRELLO TOKEN
 - TELEGRAM BOT TOKEN
@@ -66,7 +67,19 @@ After you fork and clone the development repository, you need to follow the step
 ```
 pip install -r requirements.txt
 ```
-### 7 - Running the program on an online server
+### 7a - Running the program on your local machine
+The program requires a server connected to the internet to run. To achive that you can either run the program on an online server or you can run the program on your local machine and use ngrok to connect to the internet.
+- Install NGROK [https://ngrok.com/download](Download here)
+- Unzip the downaloaded folder
+- Open your command prompt
+- Navigate to the folder where the ngrok.exe is located (Use cd on windows)
+- Run the ngrok file with the following command:
+```
+ngrok http 5000
+```
+- Copy the https link next to "Forwarding" and paste it as SERVER APP DOMAIN in [secrets/env_variables.json](env_variables.json).
+> Make sure that the ngrok link includes the '/' at the end of it - otherwise the program won't work.
+### 7b - Running the program on an online server
 This part is optional. In case you decide to upload the code on an online server, please undergo the further steps below:
 - Add all the enviroment variables (set in step 5) as configuration variables for your server
 > Don't add the variables 'TRELLO_BOARD_ID' and 'SPREADSHEET' unless you have both the Trello Board and Spreadsheet database set up correctly. If you don't insert these variables, the program will proceed to create a new board and a new spreadsheet for you. If you insert custom values for these variables without having setup the board/spreadsheet correctly, the program might crash.
