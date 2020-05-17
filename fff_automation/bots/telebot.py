@@ -13,6 +13,7 @@ import os
 from fff_automation.modules import settings
 from fff_automation.modules import utils
 from fff_automation.modules import database
+from fff_automation.classes.group import Group
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
