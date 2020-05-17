@@ -93,8 +93,10 @@ def add_group(title, admins, purpose="", onboarding="",  platform="", region="",
     # SET LABELS
     labels = []
     if region != "":
+        print("TRELLOC: Region Id: ", region)
         labels.append(client.get_label(regions[region], board_id))
     if restriction != "":
+        print("TRELLOC: Restriction Id: ", restriction)
         labels.append(client.get_label(restrictions[restriction], board_id))
     print("TRELLO: Got labels: ", labels)
 

@@ -6,6 +6,8 @@ import re
 import pytz
 from pytimeparse.timeparse import timeparse
 import random
+import pickle
+import os
 
 
 def str2date(string):
@@ -156,6 +158,27 @@ def getKeysByValue(dictOfElements, valueToFind):
         if item[1] == valueToFind:
             listOfKeys.append(item[0])
     return listOfKeys
+
+
+def dump_pkl(method, obj):
+    pickle.dump(obj, open(
+        "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, obj.chat_id, obj.user_id), "wb"))
+
+
+def load_pkl(method, chat_id, user_id):
+    try:
+        obj = pickle.load(
+            open("fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, chat_id, user_id), "rb"))
+        return obj
+    except:
+        return ""
+
+
+def delete_pkl(method, chat_id, user_id):
+    obj = load_pkl(method, chat_id, user_id)
+    os.remove(
+        "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, chat_id, user_id))
+    return obj
 
 
 def now_time():

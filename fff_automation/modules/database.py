@@ -72,8 +72,8 @@ def save_group(chat_id, title, admins, category="", region="", platform="", rest
     else:
         parent_card = ""
         print("DATABASE: No parent")
-    card_info = trelloc.add_group(title, admins_string, purpose, onboarding,
-                                  platform, region, category, restriction, is_subgroup, parent_card, date)
+    card_info = trelloc.add_group(title=title, admins=admins_string, purpose=purpose, onboarding=onboarding, platform=platform,
+                                  region=region, group_type=category, restriction=restriction, is_subgroup=is_subgroup, parentgroup_id=parent_card, date=date)
     card_id = card_info[0]
     card_url = card_info[1]
     print("DATABASE: Got Trello Card Info")
