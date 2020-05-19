@@ -459,6 +459,7 @@ def save_group_info(chat, group):
     print("BOT - Save Group Info: Made Kayboard")
 
     text = "<b>{}</b> has been saved in the database!".format(group.title)
+    utils.delete_pkl('newgroup', group.chat_id, group.user_id)
 
     chat.send_message(
         text=text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)

@@ -148,8 +148,10 @@ def getKeysByValue(dictOfElements, valueToFind):
 
 
 def dump_pkl(method, obj):
-    pickle.dump(obj, open(
-        "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, obj.chat_id, obj.user_id), "wb"))
+    pickle_out = open(
+        "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, obj.chat_id, obj.user_id), "wb")
+    pickle.dump(obj, pickle_out)
+    pickle_out.close()
 
 
 def load_pkl(method, chat_id, user_id):
