@@ -3,12 +3,12 @@ from datetime import datetime, timedelta
 from itertools import permutations
 from fff_automation.classes.call import Call
 from fff_automation.classes.group import Group
+import joblib
 import dateparser
 import re
 import pytz
 from pytimeparse.timeparse import timeparse
 import random
-import pickle
 import os
 
 
@@ -150,16 +150,14 @@ def getKeysByValue(dictOfElements, valueToFind):
 
 
 def dump_pkl(method, obj):
-    pickle_out = open(
-        "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, obj.chat_id, obj.user_id), "wb")
-    pickle.dump(obj, pickle_out)
-    pickle_out.close()
+    joblib.dump(obj, "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method,
+                                                                           obj.chat_id, obj.user_id))
 
 
 def load_pkl(method, chat_id, user_id):
     try:
-        obj = pickle.load(
-            open("fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, chat_id, user_id), "rb"))
+        obj = joblib.load(
+            "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, chat_id, user_id))
         return obj
     except:
         return ""
