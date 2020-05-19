@@ -115,7 +115,7 @@ def add_group(title, admins, purpose="", onboarding="",  platform="", region="",
         group_type.upper(), purpose, onboarding, group_type, region, platform, admins, date)
 
     # ATTACH PARENT CARD LINK TO DESCRIPTION
-    if parentgroup_id != "":
+    if is_subgroup:
         description = description + \
             "\n\n**Parent Group:** https://trello.com/c/{}".format(
                 str(parentgroup_id))
@@ -128,7 +128,7 @@ def add_group(title, admins, purpose="", onboarding="",  platform="", region="",
     print("TRELLO: Card type: ", type(newcard))
 
     # ATTACH CARD TO PARENT DESCRIPTION
-    if parentgroup_id != '':
+    if is_subgroup:
         parentgroup_card = get_card(parentgroup_id)
         print("TRELLO: Got Card")
         if "**Subgroups:**" in parentgroup_card.description:

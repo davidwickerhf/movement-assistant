@@ -7,6 +7,7 @@ from fff_automation.modules import gcalendar
 from fff_automation.modules import trelloc
 from fff_automation.modules import settings
 from fff_automation.modules import utils
+from datetime import datetime
 
 if not (os.path.isfile('fff_automation/secrets/sheet_token.pkl') and os.path.getsize('fff_automation/secrets/sheet_token.pkl') > 0):
     # use creds to create a client to interact with the Google Drive API
@@ -47,11 +48,12 @@ archive = spreadsheet.get_worksheet(1)
 deleted = spreadsheet.get_worksheet(2)
 
 
-def save_group(chat_id, title, admins, category="", region="", platform="", restriction="", date="", is_subgroup=False, parentgroup="", purpose="", onboarding="", link=""):
+def save_group(group):
+
     # try:
     # GET GROUP ADMINS
     admins_string = ""
-    for chatMemeber in admins:
+    for chatMemeber in group.admins:
         print("DATABASE: Getting group admins")
         user = chatMemeber.user
         try:
@@ -66,32 +68,32 @@ def save_group(chat_id, title, admins, category="", region="", platform="", rest
     print("DATABASE: Got Group Color")
 
     # CREATE TRELLO CARD
-    if parentgroup != '':
-        parent_card = get_group_card(parentgroup)
+    if group.is_subgroup:
+        parent_card = get_group_card(group.parentgroup)
         print("DATABASE: Got parent card")
     else:
         parent_card = ""
         print("DATABASE: No parent")
-    card_info = trelloc.add_group(title=title, admins=admins_string, purpose=purpose, onboarding=onboarding, platform=platform,
-                                  region=region, group_type=category, restriction=restriction, is_subgroup=is_subgroup, parentgroup_id=parent_card, date=date)
+    card_info = trelloc.add_group(title=group.title, admins=admins_string, purpose=group.purpose, onboarding=group.onboarding, platform=group.platform,
+                                  region=group.region, group_type=group.category, restriction=group.restriction, is_subgroup=group.is_subgroup, parentgroup_id=parent_card, date=group.date)
     card_id = card_info[0]
     card_url = card_info[1]
     print("DATABASE: Got Trello Card Info")
 
     # CREATE NEW WORKSHEET
     try:
-        calls_sheet = spreadsheet.worksheet(str(chat_id))
+        calls_sheet = spreadsheet.worksheet(str(group.chat_id))
     except:
         print("DATABASE: Creating New Sheet for new group")
         calls_sheet = spreadsheet.add_worksheet(
-            title=str(chat_id), rows="1000", cols="1")
+            title=str(group.chat_id), rows="1000", cols="1")
         calls_sheet.append_row(["EVENT ID", "CHAT ID", "CARD ID", "GROUP", "TITLE", "DATE", "TIME", "DURATION",
                                 "DESCRIPTION", "AGENDA LINK", "CALENDAR LINK", "CARD LINK", "USER ID"])
 
     # SAVE GROUP IN DATABASE
     print("DATABASE: Saved group")
-    groupchats.append_row([chat_id, card_id, title, category, region, admins_string,
-                           platform, color_id, restriction, is_subgroup, parentgroup, purpose, onboarding, card_url, link])
+    groupchats.append_row([group.chat_id, card_id, group.title, group.category, group.region, admins_string,
+                           group.platform, color_id, group.restriction, group.is_subgroup, group.parentgroup, group.purpose, group.onboarding, card_url, group.link])
 
     # SAVE IN KUMA BOARD
 
@@ -179,39 +181,42 @@ def delete_group(chat_id, username):
     groupchats.delete_row(find_row_by_id(item_id=chat_id)[0])
 
 
-def save_call(message_id, chat_id, title, date, time, user_id, duration, description="", agenda_link="", username=""):
+def save_call(call):
     # GET CALLS WORKSHEET
     try:
-        calls = spreadsheet.worksheet(str(chat_id))
+        calls = spreadsheet.worksheet(str(call.chat_id))
     except:
         print("Chat is not registerred")
         return -1
 
     # SAVE TO CALENDAR
-    group_title = get_group_title(chat_id)
-    group_color = get_group_color(chat_id)
+    group_title = get_group_title(call.chat_id)
+    group_color = get_group_color(call.chat_id)
     values = gcalendar.add_event(
-        date, time, duration, title, description, group_title, group_color)
+        call.date, call.time, call.duration, call.title, call.description, group_title, group_color)
     print("Added call to calendar")
     event_id = values[0]
     calendar_url = values[1]
 
     # DURATION STRING TO INT
-    seconds = int(duration)
+    seconds = int(call.duration)
     hours = seconds / 3600
     rest = seconds % 3600
     minutes = rest / 60
     duration_string = str(hours) + " Hours, " + str(minutes) + " Minutes"
 
     # SAVE IN TRELLO
-    values = trelloc.add_call(title, get_group_title(group_id=chat_id), get_group_card(
-        group_id=chat_id), date, time, duration, description, agenda_link, calendar_url, username)
+    values = trelloc.add_call(call.title, get_group_title(group_id=call.chat_id), get_group_card(
+        group_id=call.chat_id), call.date, call.time, call.duration, call.description, call.agenda_link, calendar_url, call.username)
     trello_url = values[1]
     card_id = values[0]
 
     # SAVE EVENT IN DATABASE
-    calls.append_row([event_id, chat_id, card_id, group_title, title, date, time,
-                      duration_string, description, agenda_link, calendar_url, trello_url, user_id])
+    date_string = datetime.strftime(call.date, '%Y/%m/%d')
+    time_string = datetime.strftime(
+        utils.str2datetime(str(call.time)), '%H:%M:%S')
+    calls.append_row([event_id, call.chat_id, card_id, group_title, call.title, date_string, time_string,
+                      duration_string, call.description, call.agenda_link, call.link, calendar_url, trello_url, call.user_id])
     print("Saved call in database")
     return [calendar_url, trello_url]
 

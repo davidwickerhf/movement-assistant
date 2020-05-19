@@ -19,6 +19,7 @@ from fff_automation.modules import settings
 from fff_automation.modules import utils
 from fff_automation.modules import database
 from fff_automation.classes.group import Group
+from fff_automation.classes.call import Call
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -50,7 +51,7 @@ chat_not_registerred = "<b>This group is not yet registerred in the database</b>
 input_argument_text = "<b>SCHEDULE A NEW CALL</b>\nFollow this wizard to schedule a new call!\n\nPlease reply to this message with the <b>{}</b> for the call you are registering\n\n[Step X out of X]"
 wrong_time_text = "<b>WARNING</b>\nThe Time you submitted is not recognized. Please submit a time for the call again with the following format:\n<code>hours:minutes | 15:00</code>\nAlso note that the time you input will be treated as GMT"
 wrong_date_text = "<b>WARNING</b>\nThe Date you submitted is not recognized. Please submit a date for the call again with the following format:\n<code>day/month/year | 15/03/2019</code>"
-text_input_argument = "<b>SCHEDULE A NEW CALL - ADD A {}</b>\nFollow this wizard to schedule a new call!\n\nPlease reply to this message with the <b>{}</b> for the call you are registering\n\n[Step {} out of {}]"
+text_input_argument = "<b>SCHEDULE A NEW CALL - ADD A {}</b>\nFollow this wizard to schedule a new call!\n\nPlease reply to this message with the <b>{}</b> for the call you are registering"
 cancel_add_call_text = "<b>CALL SCHEDULING CANCELLED</b>\nThe call hasn't been scheduled"
 
 
@@ -81,6 +82,7 @@ def new_group(update, context):
             save_group(update, context)
 
 
+@run_async
 def save_group(update, context):
     print("BOT: --- SAVE GROUP INFO ---")
     # GET GROUP INFORMATION
@@ -124,6 +126,7 @@ def edit_group(update, context):
     print("BOT: --- EDIT GROUP INFO ---")
 
 
+@run_async
 def category(update, context):
     print("BOT: --- CATEGORY ---")
     query = update.callback_query
@@ -162,6 +165,7 @@ def category(update, context):
     return REGION
 
 
+@run_async
 def region(update, context):
     print("BOT: --- REGION ---")
     query = update.callback_query
@@ -194,6 +198,7 @@ def region(update, context):
     return RESTRICTION
 
 
+@run_async
 def restriction(update, context):
     print("BOT: --- RESTRICTION ---")
     query = update.callback_query
@@ -223,6 +228,7 @@ def restriction(update, context):
     return IS_SUBGROUP
 
 
+@run_async
 def is_subgroup(update, context):
     print("BOT: --- IS SUBGROUP ---")
     query = update.callback_query
@@ -242,7 +248,7 @@ def is_subgroup(update, context):
     print("BOT - IS SUBGROUP: Query:", query.data, " type: ", type(query.data))
     if query.data == str(1):
         print("BOT: Select parents")
-        group.is_subgroup = "Yes"
+        group.is_subgroup = True
 
         # SET NEW TEXT AND MARKAP FOR PARENT REQUEST
         if len(database.get_all_groups()) > 0:
@@ -265,7 +271,7 @@ def is_subgroup(update, context):
             return IS_SUBGROUP
     elif query.data == str(0):
         print("BOT: No parents")
-        group.is_subgroup = "No"
+        group.is_subgroup = False
 
         # SET NEW TEXT AND MARKAP FOR PURPOSE REQUEST
         text = "Alright, last two steps! Please reply to this message with a short description of the purpose and mandate of the group.\nYou can skip this step by clicking the button below."
@@ -277,6 +283,7 @@ def is_subgroup(update, context):
         return PURPOSE
 
 
+@run_async
 def parent_group(update, context):
     print("BOT: --- PARENT GROUP ---")
     query = update.callback_query
@@ -314,6 +321,7 @@ def parent_group(update, context):
         return PURPOSE
 
 
+@run_async
 def purpose(update, context):
     print("BOT: --- PURPOSE ---")
     try:
@@ -355,6 +363,7 @@ def purpose(update, context):
         return ONBOARDING
 
 
+@run_async
 @send_typing_action
 def onboarding(update, context):
     print("BOT: --- ONBOARDING ---")
@@ -377,16 +386,14 @@ def onboarding(update, context):
         return REGION
 
     try:
+        group.onboarding = update.message.text
+        save_group_info(update.message.chat, group)
+        return ConversationHandler.END
+    except:
         query = update.callback_query
         query.answer()
         query.message.delete()
         save_group_info(group.message.chat, group)
-        utils.delete_pkl('newgroup', chat_id, user_id)
-        return ConversationHandler.END
-    except:
-        group.onboarding = update.message.text
-        save_group_info(update.message.chat, group)
-        utils.delete_pkl('newgroup', chat_id, user_id)
         return ConversationHandler.END
 
 
@@ -439,9 +446,8 @@ def subgroup_menu(group, direction, size=5):
 def save_group_info(chat, group):
     # GROUP SAVING: Chat id, Title, Admins, Category, Region, Restrictions, is_subgroup,  parentgroup, purpose, onboarding
     print("SAVE GROUP INFO -----------------------------")
-    group.print_arguments()
-    card_url = database.save_group(chat_id=group.chat_id, title=group.title, admins=group.admins,
-                                   category=group.category, region=group.region, platform=group.platform, restriction=group.restriction, date=datetime.now(), is_subgroup=group.is_subgroup, parentgroup=group.parentgroup, purpose=group.purpose, onboarding=group.onboarding)
+    group.date = datetime.utcnow()
+    card_url = database.save_group(group)
     if card_url == -1:
         chat.send_message(
             text="There was a problem in adding the call to the database.\nPlease contact @davidwickerhf for technical support.")
@@ -460,6 +466,7 @@ def save_group_info(chat, group):
 ####################### DELETE GROUP FUNCTIONS ##############################
 
 
+@run_async
 def delete_group(update, context):
     print("BOT: --- DELETE GROUP ---")
     user = update.message.from_user
@@ -500,6 +507,7 @@ def delete_group(update, context):
         return ConversationHandler.END
 
 
+@run_async
 def confirm_delete_group(update, context):
     print("BOT: --- CONFIRM DELETE GROUP ---")
     query = update.callback_query
@@ -530,6 +538,7 @@ def confirm_delete_group(update, context):
         print("BOT: Error in Query data in Confirm Delete Group")
 
 
+@run_async
 @send_typing_action
 def double_confirm_delete_group(update, context):
     print("BOT: --- DOUBLE CONFIRM DELETE GROUP ---")
@@ -563,13 +572,16 @@ def double_confirm_delete_group(update, context):
 ####################### CALL CONVERSATION FUNCTIONS #########################
 
 
+@run_async
 @send_typing_action
 def new_call(update, context):
     message = update.message
     message_id = message.message_id
     groupchat = update.message.chat
     user = message.from_user
-    global_user_id = user.id
+    user_id = user.id
+    chat_id = groupchat.id
+    message_id = message.message_id
     username = user['username']
     full_name = "{} {}".format(user['first_name'], user['last_name'])
     print("Got chat id")
@@ -592,52 +604,33 @@ def new_call(update, context):
         command = message_text[:message_text.find(' ')+1]
         print(command)
         # ALGORITHM IS NOT WORKING - AND IS SLOW
-        values = utils.format_string(message_text, command)
+        propcall = Call(chat_id=chat_id, user_id=user_id,
+                        message_id=message_id, username="@{}".format(username), message=message)
+        call = utils.format_string(message_text, command, propcall)
 
-        arguments = values[0]
-        missing_arguments = values[1]
-        print(missing_arguments)
-
-        # Reset Global Values
-        global global_missing_arguments
-        global saving
-        if (len(global_missing_arguments) > 0):
-            global_missing_arguments = global_missing_arguments.clear()
-        saving = list(["", "", "", arguments[3], "", ""])
-
-        # ARGUMENTS FORMAT: TITLE, DATE, TIME, DURATION, DESCRIPTION, AGENDA LINK
-        if 0 in missing_arguments or 1 in missing_arguments or 2 in missing_arguments:
-
-            global_missing_arguments = missing_arguments.copy()
-
-            print("GET ARGUMENTS")
-            if 0 in global_missing_arguments:
-                print("Requesting Title input")
-                # SEND MESSAGE
-                format_input_argument(
-                    update, 0, "Title", global_missing_arguments, global_missing_arguments.index(0))
-                return ADD_TITLE
-            elif 1 in global_missing_arguments:
-                print("Title is not missing - Requesting Date input")
-                # SEND MESSAGE
-                format_input_argument(
-                    update, 0, "Date", global_missing_arguments, global_missing_arguments.index(1))
-                return ADD_DATE
-            elif 2 in global_missing_arguments:
-                print("Date is not missing - Requesting Time input")
-                # SEND MESSAGE
-                format_input_argument(
-                    update, 0, "Time", global_missing_arguments, global_missing_arguments.index(2))
-                return ADD_TIME
+        # ARGUMENTS FORMAT: TITLE, DATE, TIME, DURATION, DESCRIPTION, AGENDA LINK, LINK
+        print("GET ARGUMENTS")
+        if call.title == '':
+            print("Requesting Title input")
+            # SEND MESSAGE
+            format_input_argument(update, 0, call.TITLE, call)
+            return ADD_TITLE
+        elif call.date == '':
+            print("Title is not missing - Requesting Date input")
+            # SEND MESSAGE
+            format_input_argument(update, 0, call.DATE, call)
+            return ADD_DATE
+        elif call.time == '':
+            print("Date is not missing - Requesting Time input")
+            # SEND MESSAGE
+            format_input_argument(update, 0, call.TIME, call)
+            return ADD_TIME
 
         print("Not returned get arguments -> ALL necessary arguments are alraedy given")
         # SAVE CALL TO DATABASE
-        for argument in arguments[4:]:
-            if argument == "":
-                argument = "N/A"
 
-        save_call_info(bot=update, context=update, title=arguments[0], date=arguments[1], time=arguments[2],
-                       duration=arguments[3], description=arguments[4], agenda_link=arguments[5])
+        save_call_info(update, context, call)
+        return ConversationHandler.END
 
 
 def call_details(update, context):
@@ -652,147 +645,151 @@ def edit_argument(update, context):
     print("EDIT ARGUMENT")
 
 
+@run_async
 @send_typing_action
 def add_title(update, context):
     print("ADD CALL TITLE")
-    print("Getting user input")
-    if update.message.from_user.id != global_user_id:
+    # GET CALL SAVED IN PERSISTANCE FILE
+    chat_id = update.effective_chat.id
+    user_id = update.message.from_user.id
+    call = utils.load_pkl('newcall', chat_id, user_id)
+    if call == "" or user_id != call.user_id:
         return ADD_TITLE
-    title = update.message.text
-    global saving
-    saving[0] = title
+
+    call.title = update.message.text
 
     # Request Call Date Input
-    if 1 in global_missing_arguments:
-        format_input_argument(
-            update, 1, "Date", global_missing_arguments, global_missing_arguments.index(1))
+    if call.date == '':
+        format_input_argument(update, 1, call.DATE, call)
         return ADD_DATE
-    elif 2 in global_missing_arguments:
-        format_input_argument(
-            update, 1, "Time", global_missing_arguments, global_missing_arguments.index(2))
+    elif call.time == '':
+        format_input_argument(update, 1, call.TIME, call)
         return ADD_TIME
     else:
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
-        save_call_info(update=update, context=context, title=saving[0], date=str(
-            saving[1]), time=str(saving[2]), duration=saving[3])
-        return CALL_DETAILS
+        save_call_info(update, context, call)
+        return ConversationHandler.END
 
 
+@run_async
 @send_typing_action
 def add_date(update, context):
-    if update.message.from_user.id != global_user_id:
+    # GET CALL SAVED IN PERSISTANCE FILE
+    chat_id = update.effective_chat.id
+    user_id = update.message.from_user.id
+    call = utils.load_pkl('newcall', chat_id, user_id)
+    if call == "" or user_id != call.user_id:
         return ADD_DATE
+
     print("ADD CALL DATE")
     print("Requesting user input")
     date_text = update.message.text
     print("Date Text: " + date_text)
     if utils.str2date(date_text) != -1:
         # INPUT IS CORRECT
-        date = utils.str2date(date_text)
-        print("Date is valid: ", date)
-        global saving
-        saving[1] = date
-        print("Date added to global list")
+        call.date = utils.str2date(date_text)
+        print("Date is valid: ", call.date)
     else:
         # INPUT IS INCORRECT
-        global add_call_message
         keyboard = [[InlineKeyboardButton("Cancel", callback_data="cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        add_call_message.delete()
-        add_call_message = update.message.reply_text(
+        call.message.delete()
+        call.message = update.message.reply_text(
             text=wrong_date_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+        utils.dump_pkl('newcall', call)
         return ADD_DATE
 
-    if 2 in global_missing_arguments:
-        format_input_argument(
-            update, 1, "Time", global_missing_arguments, global_missing_arguments.index(2))
+    if call.time == '':
+        format_input_argument(update, 1, call.TIME, call)
         print("Going to next step")
         return ADD_TIME
     else:
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
-        save_call_info(update=update, context=context, title=saving[0], date=str(
-            saving[1]), time=str(saving[2]), duration=saving[3])
-        return CALL_DETAILS
+        save_call_info(update, context, call)
+        return ConversationHandler.END
 
 
+@run_async
 @send_typing_action
 def add_time(update, context):
-    if update.message.from_user.id != global_user_id:
+    # GET CALL SAVED IN PERSISTANCE FILE
+    chat_id = update.effective_chat.id
+    user_id = update.message.from_user.id
+    call = utils.load_pkl('newcall', chat_id, user_id)
+    if call == "" or user_id != call.user_id:
         return ADD_TIME
+
     print("ADD TIME")
     print("Requesting user input")
     message_text = update.message.text
     if utils.str2time(message_text) != -1:
         # INPUT IS CORRECT
-        time = utils.str2time(message_text)
-        print("Inputted time: ", str(time))
-        global saving
-        saving[2] = time
+        call.time = utils.str2time(message_text)
+        print("Inputted time: ", str(call.time))
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
-        save_call_info(update=update, context=context, title=saving[0], date=str(
-            saving[1]), time=str(saving[2]), duration=saving[3])
+        save_call_info(update, context, call)
         return ConversationHandler.END
     else:
         # INPUT IS INCORRECT
-        global add_call_message
         keyboard = [[InlineKeyboardButton("Cancel", callback_data="cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        add_call_message.delete()
-        add_call_message = add_call_message.reply_text(
+        call.message.delete()
+        call.message = update.message.reply_text(
             text=wrong_time_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+        utils.dump_pkl('newcall', call)
+        return ADD_TIME
 
 
+@run_async
 @send_typing_action
 def cancel_call(update, context):
-    try:
-        if update.message.from_user.id != global_user_id:
-            return
-    except:
-        if update.callback_query.from_user.id != global_user_id:
-            print("BOT - CALL: Cancel Button Pressed with Query")
-            update.callback_query.answer()
-            return
-    print("CANCEL PRESSED")
-    global add_call_message
-    add_call_message.edit_text(
-        text=cancel_add_call_text, parse_mode=ParseMode.HTML)
+    # GET CALL SAVED IN PERSISTANCE FILE
+    chat_id = update.effective_chat.id
+    user_id = update.callback_query.from_user.id
+    call = utils.load_pkl('newcall', chat_id, user_id)
+    update.callback_query.answer()
+    if call == "" or user_id != call.user_id:
+        return
+    else:
+        print("CANCEL PRESSED")
+        call.message.edit_text(
+            text=cancel_add_call_text, parse_mode=ParseMode.HTML)
+        utils.delete_pkl('newcall', chat_id, user_id)
     return ConversationHandler.END
 
 
-def format_input_argument(update, state, argument_title, missing, index):
+def format_input_argument(update, state, key, call):
     keyboard = [[InlineKeyboardButton(
         "Cancel", callback_data="cancel")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-
-    global add_call_message
+    argument_title = call.order.get(key)
 
     if state == 0:
         print("SEND FIRST GET ARGUMENTS MESSAGE")
         # Code runs for the first time -> Send message
-        add_call_message = update.message.reply_text(text=text_input_argument.format(argument_title.upper(), argument_title, str(index+1), len(
-            missing)), parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+        call.message = update.message.reply_text(text=text_input_argument.format(
+            argument_title.upper(), argument_title), parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     else:
         # Code already run -> edit message
-        add_call_message.delete()
-        add_call_message = update.message.reply_text(text=text_input_argument.format(argument_title.upper(), argument_title, str(index+1), len(
-            missing)), parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+        call.message.delete()
+        call.message = update.message.reply_text(text=text_input_argument.format(
+            argument_title.upper(), argument_title), parse_mode=ParseMode.HTML, reply_markup=reply_markup)
         print("EDIT GET ARGUMENTS MESSAGE")
+    utils.dump_pkl('newcall', call)
 
 
 @send_typing_action
-def save_call_info(update, context, title, date, time, duration, description="", agenda_link=""):
-    global add_call_message
-    add_call_message.delete()
+def save_call_info(update, context, call):
+    call.message.delete()
     username = update.message.from_user.username
     message = update.message.chat.send_message(
         text="Saving call information... This might take a minute...")
 
-    values = database.save_call(
-        message_id=update.message.message_id, chat_id=update.message.chat.id, title=title, date=date, time=time, user_id=update.message.from_user.id, duration=duration, description=description, agenda_link=agenda_link, username="@{}".format(username))
+    values = database.save_call(call)
     if values == -1:
         message.edit_text(
             text="There was a problem in adding the call to the database.\nPlease contact @davidwickerhf for technical support.")
@@ -806,9 +803,9 @@ def save_call_info(update, context, title, date, time, duration, description="",
     reply_markup = InlineKeyboardMarkup(keyboard)
     print("Made Kayboard")
 
-    text = utils.format_call_info(
-        "save_call", title, date, time, duration, description, agenda_link)
+    text = utils.format_call_info("save_call", call)
     print("Formatted text")
+    utils.delete_pkl('newcall', call.chat_id, call.user_id)
 
     message.delete()
     update.message.reply_text(
@@ -884,9 +881,10 @@ def conv_timeout(update, context):
 def setup(token):
     bot = Bot(token)
     update_queue = Queue()
-    job_queue = JobQueue(bot)
+    job_queue = JobQueue()
     dp = Dispatcher(bot=bot, update_queue=update_queue,
                     use_context=True, job_queue=job_queue)
+    job_queue.set_dispatcher(dp)
 
     # Commands
     dp.add_handler(CommandHandler("help", help))

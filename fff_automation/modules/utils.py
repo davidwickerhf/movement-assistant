@@ -21,7 +21,7 @@ def str2date(string):
         print(str(date), " is an Invalid date")
         return -1
     else:
-        return datetime.strftime(date, "%Y/%m/%d")
+        return date
 
 
 def str2time(string):
@@ -55,38 +55,36 @@ def str2duration(string):
         return -1
 
 
-def format_call_info(context, title, date, time, duration, description, link):
+def format_call_info(context, call):
     header = ""
     if context == "save_call":
         header = "<b>NEW CALL SCHEDULED</b>\n"
     elif context == "update_call":
         header = "<b>CALL DETAILS UPDATED</b>\n"
 
-    print("UTILS: Duration type: ", type(duration))
-    seconds = int(duration)
+    print("UTILS: Duration type: ", type(call.duration))
+    seconds = int(call.duration)
     hours = seconds / 3600
     rest = seconds % 3600
     minutes = rest / 60
     duration_string = str(hours) + " Hours, " + str(minutes) + " Minutes"
 
-    if description == "":
-        description = "N/A"
-    if link == "":
-        link = "N/A"
+    if call.description == "":
+        call.description = "N/A"
+    if call.link == "":
+        call.link = "N/A"
     text = header + "Call details: \n\n - <b>Title:</b> {}\n - <b>Date:</b> {}\n - <b>Time (GMT):</b> {}\n - <b>Duration:</b> {}\n\n - <b>Description:</b> {}\n - <b>Agenda Link:</b> {}".format(
-        title, date, time, duration_string, description, link)
+        call.title, call.date, call.time, duration_string, call.description, call.link)
     return text
 
 
-def format_string(input_message, command):
+def format_string(input_message, command, call):
     print("Unedited message: ", input_message)
     message = input_message.replace(command, '')
     print("Message after replace: ", message)
     message = message.split(',')
     print("Message after split: ", message)
-    arguments = ["", "", "", "", "", ""]
-    missing_arguments = []
-    available_slots = [0, 1, 2, 3, 4, 5]
+    available_slots = [0, 1, 2, 3, 4, 5, 6]
 
     regex = re.compile(
         r'^(?:http|ftp)s?://'  # http:// or https://
@@ -103,47 +101,36 @@ def format_string(input_message, command):
         print(argument)
         if 1 in available_slots and str2date(argument) != -1:
             # ARGUMENT IS DATE
-            arguments[1] = argument
+            call.date = argument
             available_slots.remove(1)
             continue
         elif 2 in available_slots and str2time(argument) != -1:
             # ARGUMENT IS TIME
             print("Time: ", str(argument))
-            arguments[2] = argument
+            call.time = argument
             available_slots.remove(2)
             continue
         elif 3 in available_slots and str2duration(argument) != -1:
             # ARGUMENT IS DURATION
-            arguments[3] = str2duration(argument)
+            call.duration = str2duration(argument)
             available_slots.remove(3)
             continue
-        elif 5 in available_slots and re.match(regex, argument) is not None:
-            # ARGUMENT IS LINK
-            arguments[5] = argument
-            available_slots.remove(5)
-            continue
-        elif arguments[0] == "":
-            arguments[0] = argument
-        elif len(argument) < len(arguments[0]):
+        elif 5 in available_slots:
+            if re.match(regex, argument) is not None:
+                # ARGUMENT IS LINK
+                call.agenda_link = argument
+                available_slots.remove(5)
+                continue
+        elif call.title == "":
+            call.title = argument
+        elif len(argument) < len(call.title):
             # ARGUMENT IS DESCRIPTION
-            description = arguments[0]
-            arguments[0] = argument
-            arguments[4] = description
+            description = call.title
+            call.title = argument
+            call.description = description
         else:
-            arguments[4] = argument
-
-    print(arguments)
-    index = 0
-    for argument in arguments:
-        if argument == "":
-            if index == 3:
-                arguments[3] = "3600"
-            elif index == 0 or index == 1 or index == 2:
-                missing_arguments.append(index)
-                print("Missing Argument: " + str(index))
-        index += 1
-
-    return [arguments, missing_arguments]
+            call.description = argument
+    return call
 
 
 def get_random_event_color():

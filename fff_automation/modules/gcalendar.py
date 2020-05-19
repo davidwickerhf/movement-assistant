@@ -34,22 +34,19 @@ service = build('calendar', 'v3', credentials=credentials)
 
 
 def add_event(date, time, duration, title, description, group, color):
-    print("CALENDAR: Time type: ", type(time))
-    print("CALENDAR: Date type: ", type(date))
+    print("CALENDAR: Time type: ", type(time), ' ', time)
+    print("CALENDAR: Date type: ", type(date), ' ', date)
 
-    start_time_string = str(utils.str2date(date)) + \
-        " " + str(utils.str2time(time))
-    start_time = datetime.strptime(start_time_string, "%Y/%m/%d %H:%M:%S")
-    print("CALENDAR: Start time string: ", start_time_string)
-    print(type(start_time))
-    print("CALENDAR: Start time: " + str(start_time))
+    start_date = datetime.combine(date, time)
+    print("CALENDAR: Start time string: ", start_date)
+    print(type(start_date))
     # Get end time calculating with the duration
     print("CALENDAR: Duration string: ", duration)
     duration = timedelta(seconds=int(duration))
     print("CALENDAR: Duration: " + str(duration))
     print("CALENDAR: type: ", type(duration))
 
-    end_time = start_time + duration
+    end_time = start_date + duration
     print("CALENDAR: End time: " + str(end_time))
     print(type(end_time))
 
@@ -58,7 +55,7 @@ def add_event(date, time, duration, title, description, group, color):
         'summary': title,
         'location': group,
         'start': {
-            'dateTime': start_time.strftime("%Y-%m-%dT%H:%M:%S"),
+            'dateTime': start_date.strftime("%Y-%m-%dT%H:%M:%S"),
             'timeZone': GMT_OFF,
         },
         'end': {
