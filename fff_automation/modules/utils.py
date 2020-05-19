@@ -1,6 +1,8 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from datetime import datetime, timedelta
 from itertools import permutations
+from fff_automation.classes.call import Call
+from fff_automation.classes.group import Group
 import dateparser
 import re
 import pytz
