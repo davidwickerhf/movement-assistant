@@ -18,7 +18,7 @@ google-auth-oauthlib==0.4.0
 gspread==3.4.1
 gspread-formatting==0.2.1
 gunicorn==20.0.4
-httplib2==0.17.1
+httplib2==0.18.0
 idna==2.9
 itsdangerous==1.1.0
 Jinja2==2.11.2
