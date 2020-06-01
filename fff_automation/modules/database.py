@@ -30,9 +30,11 @@ if not (os.path.isfile('fff_automation/secrets/sheet_token.pkl') and os.path.get
 
     creds = ServiceAccountCredentials.from_json_keyfile_dict(
         client_secret_dict, scope)
-    pickle.dump(creds, open('fff_automation/secrets/sheet_token.pkl', 'wb'))
+    pickle.dump(creds, open(
+        'fff_automation/secrets/sheet_token.pkl', 'wb'))
 
-creds = pickle.load(open("fff_automation/secrets/sheet_token.pkl", "rb"))
+creds = pickle.load(
+    open("fff_automation/secrets/sheet_token.pkl", "rb"))
 client = gspread.authorize(creds)
 
 # IF NO SPREADSHEET ENV VARIABLE HAS BEEN SET, SET UP NEW SPREADSHEET
@@ -59,7 +61,9 @@ def save_group(group):
         try:
             admins_string = admins_string + "@" + user.username + "; "
         except:
-            admins_string = admins_string + user.first_name + " " + user.last_name + "; "
+            if user.first_name != None and user.last_name != None:
+                admins_string = admins_string + user.first_name + " " + user.last_name + "; "
+
     admins_string = admins_string[:-2]
     print("DATABASE: Got Admins")
 
@@ -248,7 +252,7 @@ def find_row_by_id(sheet=groupchats, item_id="", col=1):
     rows = []
     for num, cell in enumerate(column):
         if str(cell) == str(item_id):
-            rows.append(num+1)
+            rows.append(num + 1)
     if rows == []:
         rows.append(-1)
     return rows
@@ -312,9 +316,9 @@ def rotate_groups(first_index, direction, size=5):
 
         final_index = (first_index + size) % len(groups)
         if final_index < first_index:
-            rotated_groups = groups[first_index-1:final_index]
+            rotated_groups = groups[first_index - 1:final_index]
         else:
-            rotated_groups = groups[final_index-1:] + groups[:first_index]
+            rotated_groups = groups[final_index - 1:] + groups[:first_index]
             final_index = 0
 
     print("DATABASE - Rotate Groups: ", rotated_groups,

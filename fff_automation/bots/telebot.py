@@ -62,7 +62,7 @@ def send_typing_action(func):
     def command_func(update, context, *args, **kwargs):
         context.bot.send_chat_action(
             chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
-        return func(update, context,  *args, **kwargs)
+        return func(update, context, *args, **kwargs)
 
     return command_func
 
@@ -611,7 +611,7 @@ def new_call(update, context):
     else:
         message_text = update.message.text + ' '
         print("Message Text: " + message_text)
-        command = message_text[:message_text.find(' ')+1]
+        command = message_text[:message_text.find(' ') + 1]
         print(command)
         # ALGORITHM IS NOT WORKING - AND IS SLOW
         propcall = Call(chat_id=chat_id, user_id=user_id,
@@ -951,6 +951,3 @@ def setup(token):
     thread.start()
 
     return update_queue
-
-
-update_queue = setup(settings.get_var('BOT_TOKEN'))

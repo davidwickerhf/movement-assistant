@@ -25,7 +25,8 @@ if not (os.path.isfile('fff_automation/secrets/calendar_token.pkl') and os.path.
 
     creds = ServiceAccountCredentials.from_json_keyfile_dict(
         client_secret_dict, scopes=scope)
-    pickle.dump(creds, open("fff_automation/secrets/calendar_token.pkl", "wb"))
+    pickle.dump(creds, open(
+        "fff_automation/secrets/calendar_token.pkl", "wb"))
 
 
 credentials = pickle.load(

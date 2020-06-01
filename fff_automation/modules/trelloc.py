@@ -52,7 +52,7 @@ else:
     for label in labels:
         for num, index in enumerate(settings.label_order):
             if index in label.name:
-                labels_dict[num+7] = label.id
+                labels_dict[num + 7] = label.id
     settings.set_var('labels', labels_dict)
 
 
@@ -93,7 +93,7 @@ DISCUSSION_GROUP = "Discussion Group"
 PROJECT = "Project/Event"
 
 
-def add_group(title, admins, purpose="", onboarding="",  platform="", region="", group_type="", restriction="", is_subgroup="", parentgroup_id="", date=""):
+def add_group(title, admins, purpose="", onboarding="", platform="", region="", group_type="", restriction="", is_subgroup="", parentgroup_id="", date=""):
     # SET LABELS
     labels = []
     if region != "":
