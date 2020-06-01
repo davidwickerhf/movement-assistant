@@ -211,6 +211,16 @@ def add_call(title, groupchat, group_trello_id, date, time, duration, descriptio
     return [card_id, card_url]
 
 
+def delete_call(short_url):
+    print("TRELLO: --- DELETE CALL ---")
+    try:
+        card = get_card(short_url)
+        card.delete()
+    except:
+        print(
+            'TRELLOC: delete_call(): failed in deleting call from Trello Board ', short_url)
+
+
 def get_card(short_url):
     cards = board.all_cards()
     for card in cards:

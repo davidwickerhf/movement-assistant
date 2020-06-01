@@ -251,7 +251,7 @@ def is_subgroup(update, context):
         group.is_subgroup = True
 
         # SET NEW TEXT AND MARKAP FOR PARENT REQUEST
-        if len(database.get_all_groups()) > 0:
+        if len(database.get_all_rows()) > 0:
             print("BOT: Groups found")
             text = "Alright, select below the parent group of this group chat:"
             markup = subgroup_menu(

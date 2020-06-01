@@ -129,21 +129,14 @@ def delete_group(chat_id, username):
         calls = spreadsheet.worksheet(str(chat_id))
         print("DATABASE: Got calls worksheet")
 
-        # DELETE CALENDAR EVENTS
+        # DELETE CALENDAR AND TRELLO CALL EVENTS
         events_info = calls.get_all_values()
         events_info.pop(0)
         print("DATABASE: Event Info: ", events_info)
         for event in events_info:
             print("DATABASE: Event", event)
             gcalendar.delete_event(event[0])
-
-        # ARCHIVE TRELLO CALL CARDS
-        # try:
-        #    call_card_id = get_group_card(chat_id)
-        #    trelloc.delete_group(call_card_id)
-        #    print("DATABASE: Deleted Trello card")
-        # except:
-        #    print("DATABASE: No Trello Card found")
+            trelloc.delete_call(event[2])
 
         # DELETE LINKED CALL SHEET
         spreadsheet.del_worksheet(calls)
@@ -284,23 +277,24 @@ def get_group_card(group_id, sheet=groupchats):
     return card_id
 
 
-def get_call_card(group_id, index=0, sheet=groupchats):
+def get_call_card(group_id, index=0):
     sheet = spreadsheet.worksheet(str(group_id))
-    row = sheet.row_values(find_row_by_id(sheet, group_id))[index]
-    if row[0] == -1:
-        return row
-    card_id = sheet.cell(row, 3).value
+    try:
+        row = sheet.row_values(index)
+        card_id = sheet.cell(row, 3).value
+    except:
+        card_id = -1
     return card_id
 
 
-def get_all_groups(sheet=groupchats):
-    groups = sheet.get_all_values()
-    groups.pop(0)
-    return groups
+def get_all_rows(sheet=groupchats):
+    rows = sheet.get_all_values()
+    rows.pop(0)
+    return rows
 
 
 def rotate_groups(first_index, direction, size=5):
-    groups = get_all_groups()
+    groups = get_all_rows()
     print("DATABASE: rotate_groups(): Groups: ", groups)
     if len(groups) <= size:
         return [groups, first_index]
