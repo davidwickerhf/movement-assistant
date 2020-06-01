@@ -70,7 +70,7 @@ def save_group(group):
     # CREATE TRELLO CARD
     if group.is_subgroup:
         parent_card = get_group_card(group.parentgroup)
-        print("DATABASE: Got parent card")
+        print("DATABASE: Got parent card ", parent_card)
     else:
         parent_card = ""
         print("DATABASE: No parent")
@@ -152,19 +152,41 @@ def delete_group(chat_id, username):
         print("DATABASE: No Calls sheet found")
 
     # DELETE CARD IN TRELLO
-    try:
-        card_id = get_group_card(chat_id)
-        trelloc.delete_group(card_id)
-        print("DATABASE: Deleted Trello card")
-    except:
-        print("DATABASE: No Trello Card found")
+    # Get Children
+    children_row = find_row_by_id(item_id=chat_id, col=11)
+    children_cards = []
+    children = []
+    if children_row[0] != -1:
+        for child_row in children_row:
+            children.append(groupchats.row_values(child_row))
+        if isinstance(children[0], list):
+            for child in children:
+                child_card_id = get_group_card(child[0])
+                if child_card_id != -1:
+                    children_cards.append(child_card_id)
+        else:
+            children_cards.append(children[1])
+    print('DATABASE: delete_group(): Children Cards: ', children_cards)
+
+    # Get Parent
+    parent_id = groupchats.row_values(
+        find_row_by_id(item_id=chat_id)[0])[10]
+    parent_card = get_group_card(parent_id)
+    siblings = find_row_by_id(item_id=parent_id, col=11)
+    print('DATABASE: Get Parent: ', parent_id, ' ', parent_card, ' ', siblings)
+
+    # Delete card
+    card_id = get_group_card(chat_id)
+    trelloc.delete_group(card_id, parent_card, children_cards)
+    print("DATABASE: Deleted Trello card")
 
     # DELETE CHILDREN LINKS IN DATABASE
-    children = find_row_by_id(item_id=chat_id, col=11)
     print("DATABASE:  Children: ", children, " Type: ", type(children))
-    if children[0] != -1:
-        for child in children:
+    if children_row[0] != -1:
+        for child in children_row:
+            print('DATABASE: delete_group(): Child: ', child)
             groupchats.update_cell(child, 11, '')
+            groupchats.update_cell(child, 10, 'FALSE')
     print("DATABASE:  Deleted children")
 
     # DROP UNNECESSAY INFO
@@ -234,7 +256,6 @@ def find_row_by_id(sheet=groupchats, item_id="", col=1):
     for num, cell in enumerate(column):
         if str(cell) == str(item_id):
             rows.append(num+1)
-            # need to remove child parent info now
     if rows == []:
         rows.append(-1)
     return rows
@@ -263,9 +284,9 @@ def get_group_card(group_id, sheet=groupchats):
     return card_id
 
 
-def get_call_card(group_id, index=0):
+def get_call_card(group_id, index=0, sheet=groupchats):
     sheet = spreadsheet.worksheet(str(group_id))
-    row = find_row_by_id(sheet, group_id)[index]
+    row = sheet.row_values(find_row_by_id(sheet, group_id))[index]
     if row[0] == -1:
         return row
     card_id = sheet.cell(row, 3).value
@@ -279,22 +300,29 @@ def get_all_groups(sheet=groupchats):
 
 
 def rotate_groups(first_index, direction, size=5):
-    groups = get_all_groups(groupchats)
+    groups = get_all_groups()
+    print("DATABASE: rotate_groups(): Groups: ", groups)
+    if len(groups) <= size:
+        return [groups, first_index]
+
     if direction == 0:
-        final_index = first_index - size
-        if final_index >= 0:
+
+        final_index = (first_index - size) % len(groups)
+        if final_index < first_index:
             rotated_groups = groups[final_index:first_index]
         else:
-            rotated_groups = groups[final_index:0]
+            rotated_groups = groups[:first_index] + groups[final_index:]
             final_index = 0
+
     elif direction == 1:
-        final_index = first_index + size
-        if final_index <= len(groups):
+
+        final_index = (first_index + size) % len(groups)
+        if final_index < first_index:
             rotated_groups = groups[first_index-1:final_index]
         else:
-            rotated_groups = groups[first_index-1:len(groups)-1]
-            final_index = len(groups)-1
-    print("DATABASE: Check Test")
+            rotated_groups = groups[final_index-1:] + groups[:first_index]
+            final_index = 0
+
     print("DATABASE - Rotate Groups: ", rotated_groups,
           " | Final Index: ", final_index)
     return [rotated_groups, final_index]

@@ -255,7 +255,8 @@ def is_subgroup(update, context):
             print("BOT: Groups found")
             text = "Alright, select below the parent group of this group chat:"
             markup = subgroup_menu(
-                group=group, direction=1, size=5)
+                group=group, direction=1)
+            query.edit_message_text(text)
             query.edit_message_reply_markup(markup)
             group.message = query.message
             utils.dump_pkl('newgroup', group)
@@ -300,7 +301,7 @@ def parent_group(update, context):
     if user_id != group.user_id:
         return PARENT_GROUP
 
-    if query.data == str(0) or str(1):
+    if query.data in (0, 1):
         markup = subgroup_menu(
             group=group, direction=query.data)
         query.edit_message_reply_markup(markup)
@@ -308,11 +309,11 @@ def parent_group(update, context):
         utils.dump_pkl('newgroup', group)
         return PARENT_GROUP
     else:
-        group.region = utils.getKeysByValue(
-            database.trelloc.regions, query.data)[0]
+        print("TELEBOT: parent_group(): Query Data: ", query.data)
+        group.parentgroup = query.data
 
         # SET NEW TEXT AND MARKAP FOR PURPOSE REQUEST
-        text = "Great! Lasto two steps! Please reply to this message with a short description of the purpose and mandate of the group.\nYou can skip this step by clicking the button below."
+        text = "Great! Last two steps! Please reply to this message with a short description of the purpose and mandate of the group.\nYou can skip this step by clicking the button below."
         markup = group_menu(["Skip"], ["skip"])
         query.edit_message_text(text, parse_mode=ParseMode.HTML)
         query.edit_message_reply_markup(markup)
@@ -387,13 +388,19 @@ def onboarding(update, context):
 
     try:
         group.onboarding = update.message.text
+        group.message.delete()
+        group.message = update.message.reply_text(
+            'Alright, this group is being registered... this might take a minute...')
         save_group_info(update.message.chat, group)
+        group.message.delete()
         return ConversationHandler.END
     except:
         query = update.callback_query
         query.answer()
-        query.message.delete()
+        query.edit_message_text(
+            'Alright, this group is being registered... this might take a minute...')
         save_group_info(group.message.chat, group)
+        query.message.delete()
         return ConversationHandler.END
 
 
@@ -420,9 +427,10 @@ def group_menu(button_titles, callbacks, cols=1):
     return markup
 
 
-def subgroup_menu(group, direction, size=5):
+def subgroup_menu(group, direction, size=4):
     values = database.rotate_groups(
         first_index=group.pgroup_last_index, direction=direction, size=size)
+    print("TELEBOT: Rotated Groups: ", values)
     rotated_groups = values[0]
     print("Check 1 ", rotated_groups)
     group.pgroup_last_index = values[1]
@@ -432,6 +440,7 @@ def subgroup_menu(group, direction, size=5):
         print("Check 2")
         row = []
         group_id = group[0]
+        print("TELEBOT: subgroup_menu(): Group Id: ", group_id)
         title = database.get_group_title(group_id)
         button = InlineKeyboardButton(text=title, callback_data=group_id)
         row.append(button)
@@ -561,7 +570,7 @@ def double_confirm_delete_group(update, context):
             return ConversationHandler.END
         elif query.data == str(1):
             # USER CLICKED DELETE BUTTON
-            text = "Ok, this group is being being deleted... This might take a minute..."
+            text = "Ok, this group is being deleted... This might take a minute..."
             query.edit_message_text(text=text)
             database.delete_group(chat_id, user_id)
             text = "@{} Cool, this group's information has been deleted from the database, as well as the Trello Board. All call events have been erased.".format(
