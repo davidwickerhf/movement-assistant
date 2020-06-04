@@ -88,6 +88,6 @@ This part is optional. In case you decide to upload the code on an online server
 > To add your client secret as config variable, see [fff_automation/setup/clean_json.py](fff_automation/setup/clean_json.py). You'll need to copy the values of your client secret and paste it in the file above following the instructions. Then, run the script locally and it will return the client secret formatted correctly into a string, which you can paste as config variable onto your server.
 
 
-There you go! Now run the [app.py](app.py) file and check if everything is working fine. If you encounter any errors, feel free to add the procedure you undertook and the error code as an issue in the development branch of the repository, mentioning @davidwickerhf 
+There you go! Now run the [run.py](run.py) file and check if everything is working fine. If you encounter any errors, feel free to add the procedure you undertook and the error code as an issue in the development branch of the repository, mentioning @davidwickerhf 
 
 
