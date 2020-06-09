@@ -2,7 +2,7 @@ import os
 import emoji
 from fff_automation.modules import utils
 from trello import TrelloClient
-from fff_automation.modules import settings
+from fff_automation.modules import settings, database
 import requests
 import json
 import re
@@ -93,58 +93,70 @@ DISCUSSION_GROUP = "Discussion Group"
 PROJECT = "Project/Event"
 
 
-def add_group(title, admins, purpose="", onboarding="", platform="", region="", group_type="", restriction="", is_subgroup="", parentgroup_id="", date=""):
+def add_group(group):
     # SET LABELS
     labels = []
-    if region != "":
-        print("TRELLOC: Region Id: ", region)
-        labels.append(client.get_label(regions[region], board_id))
-    if restriction != "":
-        print("TRELLOC: Restriction Id: ", restriction)
-        labels.append(client.get_label(restrictions[restriction], board_id))
+    if group.region != "":
+        print("TRELLOC: Region Id: ", group.region)
+        labels.append(client.get_label(regions[group.region], board_id))
+    if group.restriction != "":
+        print("TRELLOC: Restriction Id: ", group.restriction)
+        labels.append(client.get_label(
+            restrictions[group.restriction], board_id))
     print("TRELLO: Got labels: ", labels)
 
     group_list = ""
     # SELECT LIST
-    if group_type == WORKING_GROUP:
+    if group.category == WORKING_GROUP:
         group_list = wg_list
-    elif group_type == DISCUSSION_GROUP:
+    elif group.category == DISCUSSION_GROUP:
         group_list = dg_list
-    elif group_type == PROJECT:
+    elif group.category == PROJECT:
         group_list = projects_list
     print("TRELLO: Got list")
 
     # SET DESCRIPTION
     description = "**INTERNATIONAL {}**\n **Purpose: **{}\n\n**Onboarding:** {}\n\n**Group Category:** {}\n**Group Region:** {}\n**Group Platform:** {}\n**Group Admins:** {}\n\n**Registered on:** {}".format(
-        group_type.upper(), purpose, onboarding, group_type, region, platform, admins, date)
+        group.category.upper(), group.purpose, group.onboarding, group.category, group.region, group.platform, group.admin_string, group.date)
 
     # ATTACH PARENT CARD LINK TO DESCRIPTION
-    if is_subgroup:
+    if group.is_subgroup:
+        print("TRELLOC: Parent ID:", group.parentgroup)
+        parentcard_id = database.get_group_card(group.parentgroup)
+        print('TRELLOC: Parent Card: ', parentcard_id)
         description = description + \
             "\n\n**Parent Group:** https://trello.com/c/{}".format(
-                str(parentgroup_id))
+                str(parentcard_id))
     print("TRELLO: Set description")
 
     # SAVE CARD AND GET ID
     newcard = group_list.add_card(
-        name=title, desc=description, labels=labels, position="bottom")
+        name=group.title, desc=description, labels=labels, position="bottom")
     print("TRELLO: Saved Card: ", newcard)
     print("TRELLO: Card type: ", type(newcard))
 
     # ATTACH CARD TO PARENT DESCRIPTION
-    if is_subgroup:
-        print("TRELLOC: add_group(): Parent Group Card Id: ", parentgroup_id)
-        parentgroup_card = get_card(parentgroup_id)
+    if group.is_subgroup:
+        print("TRELLOC: add_group(): Parent Group Card Id: ", parentcard_id)
+        parentgroup_card = get_card(parentcard_id)
         print("TRELLOC: add_group(): Card: ", parentgroup_card,
               ' Type: ', type(parentgroup_card))
 
         print("TRELLO: Got Card")
         if "**Subgroups:**" in parentgroup_card.description:
-            parentgroup_card.set_description(parentgroup_card.description +
-                                             "\n- {} -> {}".format(newcard.name, newcard.short_url))
+            parentgroup_card.set_description(
+                parentgroup_card.description + "\n- {} -> {}".format(
+                    newcard.name,
+                    newcard.short_url
+                )
+            )
         else:
-            parentgroup_card.set_description(parentgroup_card.description + "\n**Subgroups:**"
-                                             "\n- {} -> {}".format(newcard.name, newcard.short_url))
+            parentgroup_card.set_description(
+                parentgroup_card.description + "\n**Subgroups:**" + "\n- {} -> {}".format(
+                    newcard.name,
+                    newcard.short_url
+                )
+            )
         print("TRELLO: Added connection in Parent Card")
 
     card_url = newcard.short_url
@@ -187,21 +199,24 @@ def delete_group(card_id, parentcard_id="", childrencards_id=[], siblings=[]):
         update_card(children_id, desc=description)
 
 
-def add_call(title, groupchat, group_trello_id, date, time, duration, description, agenda_link, calendar_link, registred_by):
+def add_call(call):
     print("TRELLO: --- ADD CALL ---")
     # GET INFORMATION TO PASS ON
-    parent_card = get_card(group_trello_id)
-    try:
-        if parent_card == -1:
-            print("TRELLO: Parent Card Not Found")
-    except:
-        print("TRELLO: Card was found with no error")
+    # add try: exept: statement
+    parent_card = get_card(
+        database.get_group_card(
+            database.get(
+                call.chat_id
+            )[0].id
+        )
+    )
+
     labels = [client.get_label(upcoming_id, board_id)]
     description = ""
 
     # CREATE TRELLO CARD
     newcard = planned_calls_list.add_card(
-        name=title, desc=description, labels=labels, position='top')
+        name=call.title, desc=description, labels=labels, position='top')
     print("TRELLO: Saved Call Card: ", newcard)
 
     # CREATE ATTACHMENTS
@@ -257,3 +272,23 @@ def update_card(card_id, desc='', name='', due='', dueComplete=''):
     response = requests.request("PUT", url, headers=headers)
     print(json.dumps(json.loads(response.text),
                      sort_keys=True, indent=4, separators=(",", ": ")))
+
+
+def clear_data():
+    """
+    This method will clear all cards in the trello board. It can be used when testing the program, to easily reset the data when something is broken.
+    The data will still remain in the database and the board can be repopulated.
+    """
+    # calls list
+    planned_calls_list.archive_all_cards()
+    # dg list
+    dg_list.archive_all_cards()
+    # wg list
+    wg_list.archive_all_cards()
+    # project list
+    projects_list.archive_all_cards()
+    # past calls list
+    past_calls_list.archive_all_cards()
+    # archive list
+    archive_list.archive_all_cards()
+    print('TRELLOC: Archived all cards')

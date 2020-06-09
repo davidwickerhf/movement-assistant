@@ -15,7 +15,9 @@ class Call():
                  status=0,
                  message='',
                  message_id='',
-                 username=''):
+                 name='',
+                 duration_string='',
+                 card_url=''):
         self.id = id
         self.chat_id = chat_id
         self.card_id = card_id
@@ -32,7 +34,9 @@ class Call():
 
         self.message = message
         self.message_id = message_id
-        self.username = username
+        self.name = name
+        self.duration_string = duration_string
+        self.card_url = card_url
         self.TITLE, self.DATE, self.TIME, self.DURATION, self.DESCRIPTION, self.AGENDALINK, self.LINK = range(
             7)
         self.order = {self.TITLE: "Title", self.DATE: "Date", self.TIME: "Time",

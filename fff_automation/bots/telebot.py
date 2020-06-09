@@ -15,7 +15,7 @@ import json
 import logging
 import os
 import pickle
-from fff_automation.modules import settings
+from fff_automation.modules import settings, utils, database, interface
 from fff_automation.modules import utils
 from fff_automation.modules import database
 from fff_automation.classes.group import Group
@@ -94,7 +94,7 @@ def save_group(update, context):
         update.message.chat.send_message(
             text="This command can be run only in group chats")
         return ConversationHandler.END
-    elif (database.find_row_by_id(chat_id)[0] == None):
+    elif (database.get(chat_id)[0] == None):
         # GET ALL USERS
         users = chat.get_administrators()
         # SAVE GROUP INSTANCE IN PICKLE
@@ -104,11 +104,12 @@ def save_group(update, context):
             users=users,
             platform="Telegram",
             user_id=user_id,
-            message=update.message)
+            message=update.message
+        )
 
         # CREATE MARKUP FOR CATEOGORY CHOICE:
         markup = group_menu(
-            [database.trelloc.WORKING_GROUP, database.trelloc.DISCUSSION_GROUP, database.trelloc.PROJECT], [database.trelloc.WORKING_GROUP, database.trelloc.DISCUSSION_GROUP, database.trelloc.PROJECT])
+            [interface.trelloc.WORKING_GROUP, interface.trelloc.DISCUSSION_GROUP, interface.trelloc.PROJECT], [interface.trelloc.WORKING_GROUP, interface.trelloc.DISCUSSION_GROUP, interface.trelloc.PROJECT])
 
         # SEND MESSAGE WITH INTRO AND REQUEST OF CATEGORY
         group.message = chat.send_message(
@@ -153,13 +154,13 @@ def category(update, context):
     # SET NEW TEXT AND MARKAP FOR LEVEL REQUEST
     text = "Ok, cool!\nNow please select the <b>region</b> this group concerns: "
     markup = group_menu(["Africa", "Asia", "North America", "South America", "Oceania", "Europe", "Global"], [
-        database.trelloc.regions['Africa'],
-        database.trelloc.regions['Asia'],
-        database.trelloc.regions['North America'],
-        database.trelloc.regions['South America'],
-        database.trelloc.regions['Oceania'],
-        database.trelloc.regions['Europe'],
-        database.trelloc.regions['Global']], 2)
+        interface.trelloc.regions['Africa'],
+        interface.trelloc.regions['Asia'],
+        interface.trelloc.regions['North America'],
+        interface.trelloc.regions['South America'],
+        interface.trelloc.regions['Oceania'],
+        interface.trelloc.regions['Europe'],
+        interface.trelloc.regions['Global']], 2)
     print("BOT - CATEGORY: Created Region Markup")
     # EDIT MESSAGE TEXT AND MARKUP -  REQUEST REGION
     query.edit_message_text(text, parse_mode=ParseMode.HTML)
@@ -187,14 +188,15 @@ def region(update, context):
         return REGION
     else:
         group.region = utils.getKeysByValue(
-            database.trelloc.regions, query.data)[0]
+            interface.trelloc.regions, query.data)[0]
 
     # SET NEW TEXT AND MARKAP FOR RESTRICTION REQUEST
     text = "Cool! Next, please select the <b>access level</b> for this this group: \n\n<b>Open</b> - Any fff activist working on the international level is allowed to enter\n\n<b>Restricted</b> - Some level of restriction (example: n. activists per country/region\n\n<b>Closed</b> - The group is closed"
+
     markup = group_menu(["Open", "Restricted", "Closed"],
-                        [database.trelloc.restrictions['Open'],
-                         database.trelloc.restrictions['Restricted'],
-                         database.trelloc.restrictions['Closed']])
+                        [interface.trelloc.restrictions['Open'],
+                         interface.trelloc.restrictions['Restricted'],
+                         interface.trelloc.restrictions['Closed']])
     query.edit_message_text(text, parse_mode=ParseMode.HTML)
     query.edit_message_reply_markup(markup)
     group.message = query.message
@@ -220,7 +222,7 @@ def restriction(update, context):
         return RESTRICTION
     else:
         group.restriction = utils.getKeysByValue(
-            database.trelloc.restrictions, query.data)[0]
+            interface.trelloc.restrictions, query.data)[0]
 
     # SET NEW TEXT AND MARKAP FOR IS SUBGOUP REQUEST
     text = "Awesome. Is this chat a sub-group of any working/discussion group in fridays for future? Answer by clicking the buttons below:"
@@ -255,7 +257,7 @@ def is_subgroup(update, context):
         group.is_subgroup = True
 
         # SET NEW TEXT AND MARKAP FOR PARENT REQUEST
-        if database.find_row_by_id()[0] != None:
+        if database.get()[0] != None:
             print("BOT: Groups found")
             text = "Alright, select below the parent group of this group chat:"
             markup = subgroup_menu(
@@ -432,7 +434,7 @@ def group_menu(button_titles, callbacks, cols=1):
 
 
 def subgroup_menu(group, direction, size=4):
-    values = database.rotate_groups(
+    values = interface.rotate_groups(
         first_index=group.pgroup_last_index, direction=direction, size=size)
     print("TELEBOT: Rotated Groups: ", values)
     rotated_groups = values[0]
@@ -460,7 +462,8 @@ def save_group_info(chat, group):
     # GROUP SAVING: Chat id, Title, Admins, Category, Region, Restrictions, is_subgroup,  parentgroup, purpose, onboarding
     print("SAVE GROUP INFO -----------------------------")
     group.date = datetime.utcnow()
-    card_url = database.save_group(group)
+    group.name = chat.get_member(group.user_id).user.name
+    card_url = interface.save_group(group)
     if card_url == -1:
         chat.send_message(
             text="There was a problem in adding the call to the database.\nPlease contact @davidwickerhf for technical support.")
@@ -493,7 +496,7 @@ def delete_group(update, context):
         update.message.chat.send_message(
             text="This command can be run only in group chats")
         return ConversationHandler.END
-    elif database.find_row_by_id(item_id=chat_id)[0] == None:
+    elif database.get(item_id=chat_id)[0] == None:
         print("BOT - Delete Group: Group is not registerred")
         update.message.reply_text(
             text="This group isn't registerred yet, thus it can't be deleted. Please register this group with the following command:\n/newgroup - This command will take you through a wizard to register this group's information into the FFF Transparency Database.")
@@ -505,11 +508,7 @@ def delete_group(update, context):
             text="<b>WARNING</b>\nBy deleting a group, it's information will be erased from the database and from the Trello Board. All tied calls events will be deleted from both the Trello Board and Google Calendar. Be aware that this action cannot be undone. Use /archivegroup if you are simply archiving the group.\n\nAre you sure you want to delete this group permanently?", reply_markup=markup, parse_mode=ParseMode.HTML)
 
         # ADD GROUP TO PERSISTANCE
-        group = Group(
-            id=chat_id,
-            user_id=user.id,
-            message=message
-        )
+        group = database.get(chat_id)[0]
         utils.dump_pkl('deletegroup', group)
         return CONFIRM_DELETE_GROUP
     else:
@@ -534,7 +533,6 @@ def confirm_delete_group(update, context):
     if group == "" or group.user_id != user_id:
         # USER DOES NOT HAVE PERMISSION TO DELETE BOT
         print('TELEBOT: delete_group(): User does not have permission. Group: ', group)
-        print('Group.user_id: ', group.user_id)
         print('Query user: ', user_id)
         query.answer()
         return CONFIRM_DELETE_GROUP
@@ -583,7 +581,7 @@ def double_confirm_delete_group(update, context):
             # USER CLICKED DELETE BUTTON
             text = "Ok, this group is being deleted... This might take a minute..."
             query.edit_message_text(text=text)
-            database.delete_group(chat_id, user_id)
+            interface.delete_group(group)
             text = "@{} Cool, this group's information has been deleted from the database, as well as the Trello Board. All call events have been erased.".format(
                 query.from_user.username)
             query.edit_message_text(text=text)
@@ -603,8 +601,8 @@ def new_call(update, context):
     user_id = user.id
     chat_id = groupchat.id
     message_id = message.message_id
-    username = user['username']
-    full_name = "{} {}".format(user['first_name'], user['last_name'])
+    name = user.name
+
     print("Got chat id")
 
     if groupchat.id == user.id:
@@ -612,7 +610,7 @@ def new_call(update, context):
         groupchat.send_message(
             text=new_call_onlygroups_message)
         return ConversationHandler.END
-    elif database.find_row_by_id(item_id=update.message.chat.id)[0] == None:
+    elif database.get(item_id=update.message.chat.id)[0] == None:
         print("Chat is not registered yet")
         text = chat_not_registerred.format(
             new_group_description)
@@ -626,7 +624,7 @@ def new_call(update, context):
         print(command)
         # ALGORITHM IS NOT WORKING - AND IS SLOW
         propcall = Call(chat_id=chat_id, user_id=user_id,
-                        message_id=message_id, username="@{}".format(username), message=message)
+                        message_id=message_id, name=name, message=message)
         call = utils.format_string(message_text, command, propcall)
 
         # ARGUMENTS FORMAT: TITLE, DATE, TIME, DURATION, DESCRIPTION, AGENDA LINK, LINK
@@ -808,8 +806,8 @@ def save_call_info(update, context, call):
     call.message.delete()
     message = update.message.chat.send_message(
         text="Saving call information... This might take a minute...")
-
-    values = database.save_call(call)
+    call.name = update.effective_chat.get_member(call.user_id).user.name
+    values = interface.save_call(call)
     if values == -1:
         message.edit_text(
             text="There was a problem in adding the call to the database.\nPlease contact @davidwickerhf for technical support.")

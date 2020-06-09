@@ -1,4 +1,4 @@
-from ..packages.modules import settings
+from fff_automation.modules import settings
 import sys
 import os
 import requests

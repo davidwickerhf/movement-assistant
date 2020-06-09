@@ -274,19 +274,26 @@ def set_sheet(client):
     # CREATE GROUP CHATS SHEET
     groupchats = spreadsheet.add_worksheet(
         title="Groupchats", rows="150", cols="15")
-    groupchats.append_row(["GROUP ID", "CARD ID", "TITLE", "CATEGORY", "REGION", "ADMINS", "PLATFORM",
-                           "COLOR", "RESTRICTION", "IS SUBGROUP", "PARENT GROUP", "PURPOSE", "ONBOARDING", "TRELLO CARD", "LINK"])
+    groupchats.append_row(['CHAT ID', 'TITLE', 'CATEGORY', 'REGION', 'RESTRICTION', 'ADMINS',
+                           'PLATFORM', 'PARENT GROUP', 'PURPOSE', 'ONBOARDING', 'DATE ACTIVATED', 'ACTIVATED BY'])
     print("SETTINGS: Created Groupchats Sheet")
 
+    # CREATE CALL SHEET
+    calls = spreadsheet.add_worksheet(
+        title='Calls', rows="150", cols="11")
+    calls.append_row(["EVENT ID", "GROUP", "TITLE", "DATE", "TIME", "DURATION",
+                      "DESCRIPTION", "AGENDA LINK", "CALENDAR LINK", "CARD LINK", "REGISTERED BY"])
+    print("SETTINGS: Created Calls Sheet")
+
     # CREATE ARCHIVE SHEET
-    archive = spreadsheet.add_worksheet(title="Archive", rows="150", cols="13")
-    archive.append_row(["GROUP ID", "CARD ID", "TITLE", "CATEGORY", "REGION", "ADMINS",
-                        "PLATFORM", "COLOR", "PURPOSE", "ONBOARDING", "TRELLO LINK", "DATE OF ARCHIVAL"])
+    archive = spreadsheet.add_worksheet(title="Archive", rows="150", cols="7")
+    archive.append_row(['CHAT ID', 'TITLE', 'CATEGORY',
+                        'REGION', 'PLATFORM', 'DATE ARCHIVED', 'ARCHIVED BY'])
     print("SETTINGS: Created Archive Sheet")
 
     # CREATE LOGS SHEET
-    deleted = spreadsheet.add_worksheet(title="Logs", rows="500", cols="4")
-    deleted.append_row(["TIMESTAMP", "USER ID", "ACTION", "GROUP"])
+    logs = spreadsheet.add_worksheet(title="Logs", rows="500", cols="5")
+    logs.append_row(["TIMESTAMP", "USER ID", "ACTION", "GROUP", 'ITEM'])
     print("SETTINGS: Created Logs Sheet")
 
     # DELETE PRE-EXISTING SHEET

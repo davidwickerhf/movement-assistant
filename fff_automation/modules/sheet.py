@@ -1,9 +1,10 @@
+import gspread
 import os
 import json
 import pickle
 from oauth2client.service_account import ServiceAccountCredentials
-import gspread
-from fff_automation.modules import settings
+from fff_automation.modules import settings, utils, database
+from datetime import datetime
 
 if not (os.path.isfile('fff_automation/secrets/sheet_token.pkl') and os.path.getsize('fff_automation/secrets/sheet_token.pkl') > 0):
     # use creds to create a client to interact with the Google Drive API
@@ -42,10 +43,125 @@ print("DATABASE: id == ", settings.get_var('SPREADSHEET'))
 SPREADSHEET = settings.get_var('SPREADSHEET')
 spreadsheet = client.open_by_key(SPREADSHEET)
 groupchats = spreadsheet.get_worksheet(0)
-archive = spreadsheet.get_worksheet(1)
-logs = spreadsheet.get_worksheet(2)
+calls = spreadsheet.get_worksheet(1)
+archive = spreadsheet.get_worksheet(2)
+logs = spreadsheet.get_worksheet(3)
 
 
-def log(timestamp, user_id, action, group_name):
+def log(timestamp, user_id, action, group_name, item=''):
     print('LOG')
-    logs.append_row([timestamp, user_id, action, group_name])
+    logs.append_row([timestamp, user_id, action, group_name, item])
+
+
+def save_group(group, parent_title):
+    # SAVE GROUP IN DATABASE
+    print("DATABASE: Saved group")
+    groupchats.append_row([group.id, group.title, group.category, group.region, group.restriction,
+                           group.admin_string, group.platform, parent_title, group.purpose, group.onboarding, str(group.date), group.name])
+    # LOG
+    log(str(group.date), group.user_id, 'ACTIVATE GROUP', group.title)
+
+
+def update_group(chat_id, title, admins, category="", level="",
+                 platform="", purpose="", mandate="", onboarding="", link=""):
+    try:
+        row = find_row_by_id(chat_id)[0]
+    except:
+        save_group(chat_id, title, category, level,
+                   admins, platform, purpose, mandate, onboarding, link)
+    # function is not complete
+
+
+def archive_group(chat_id, username):
+    print("DATABASE: Archive Group Started")
+    group_info = find_row_by_id(chat_id)[0]
+    group_info.append(str(utils.now_time()))
+    # ADD GROUP INFO TO ARCHIVE
+    archive.append_row(group_info)
+    # function is not complete
+
+
+def delete_group(group):
+    # DELETE CHILDREN LINKS IN DATABASE
+    if group.children[0] != None:
+        for child in group.children:
+            print('DATABASE: delete_group(): Child: ', child)
+            row = find_row_by_id(item_id=group.id)[0]
+            groupchats.update_cell(row, 8, '')
+    print("DATABASE:  Deleted children")
+
+    # REMOVE ROW FROM GROUPS SHEET
+    groupchats.delete_row(find_row_by_id(item_id=group.id)[0])
+
+    # REMOVE CALLS
+    for call in group.calls:
+        delete_call(call)
+
+    # LOG
+    log(str(utils.now_time()), group.user_id, 'DELETE GROUP', group.title)
+
+
+def save_call(call):
+    # SAVE IN SHEET
+    calls.append_row([call.id, database.get_group_title(call.chat_id), call.title, str(call.date), str(
+        call.time), call.duration_string, call.description, call.agenda_link, call.calendar_url, call.card_url, call.name])
+
+    # LOG
+    log(str(utils.now_time()), call.user_id, 'NEW CALL',
+        database.get_group_title(call.chat_id), call.title)
+
+
+def delete_call(call):
+    call_row = find_row_by_id(sheet=calls, item_id=call.id)[0]
+    calls.delete_row(call_row)
+    log(str(utils.now_time()), call.user_id, 'DELETE CALL',
+        database.get_group_title(call.chat_id), call.title)
+
+
+def clear_data():
+    """
+    This method will clear all data in the google spreadsheet. It can be used when testing the program, to easily reset the data when something is broken.
+    The data will still remain in the database and the sheet can be repopulated.
+    """
+    # CLEAR GROUPS SHEET
+    rows = get_all_rows(sheet=groupchats)
+    for row in rows:
+        groupchats.delete_row(rows.index(row) + 1)
+
+    # CLEAR CALLS SHEET
+    rows = get_all_rows(sheet=calls)
+    for row in rows:
+        calls.delete_row(rows.index(row) + 1)
+
+    # CLEAR ARCHIVE SHEET
+    rows = get_all_rows(sheet=archive)
+    for row in rows:
+        archive.delete_row(rows.index(row) + 1)
+
+    # LOG CLEARING
+    log(str(utils.now_time()), 'ADMIN', 'CLEAR DATA', '')
+    print('SHEET: Erased all data')
+
+
+def find_row_by_id(sheet=groupchats, item_id="", col=1):
+    print("DATABASE: find_row_by_id()")
+    if(sheet == "groups"):
+        sheet = groupchats
+    elif(sheet == "calls"):
+        sheet = spreadsheet.worksheet(str(item_id))
+        col = 2
+
+    column = sheet.col_values(col)
+    rows = []
+    for num, cell in enumerate(column):
+        if str(cell) == str(item_id):
+            rows.append(num + 1)
+    if rows == []:
+        rows.append(-1)
+    return rows
+
+
+def get_all_rows(sheet=groupchats):
+    rows = sheet.get_all_values()
+    rows.pop(0)
+    return rows

@@ -34,7 +34,12 @@ class Group():
                  status=0,
                  user_id='',
                  users='',
+                 admin_string='',
+                 name='',
                  message='',
+                 children='',
+                 siblings='',
+                 calls='',
                  pgroup_last_index='',
                  ):
         self.id = id
@@ -54,7 +59,12 @@ class Group():
         self.user_id = user_id
 
         self.users = users
+        self.admin_string = admin_string
+        self.name = name
         self.message = message
+        self.children = children
+        self.siblings = siblings
+        self.calls = calls
         self.pgroup_last_index = pgroup_last_index
 
     def print_arguments(self):
