@@ -3,6 +3,8 @@ from trello import TrelloClient
 import gspread
 import requests
 import json
+import asyncio
+import sqlite3
 
 # IMPORTANT NOTICE
 # The correct functionality of the labels depends on these variables and on the label_order variable.
@@ -72,6 +74,10 @@ def set_enviroment():
     variables['TRELLO_KEY'] = os.environ.get('TRELLO_KEY')
     variables['TRELLO_TOKEN'] = os.environ.get('TRELLO_TOKEN')
     variables['BOT_TOKEN'] = os.environ.get('BOT_TOKEN')
+    variables['TELEGRAM_APP_ID'] = os.environ.get('TELEGRAM_APP_ID')
+    variables['TELEGRAM_APP_HASH'] = os.environ.get('TELEGRAM_APP_HASH')
+    variables['TELEGRAM_PHONE_NUMBER'] = os.environ.get(
+        'TELEGRAM_PHONE_NUMBER')
     variables['CALENDAR_ID'] = os.environ.get('CALENDAR_ID')
     variables['GDRIVE_EMAIL'] = os.environ.get('GDRIVE_EMAIL')
     variables['SPREADSHEET'] = os.environ.get('SPREADSHEET')
@@ -203,7 +209,56 @@ def set_trello(client, key, token):
     print("SETTINGS: Created Info Card")
 
 
-def set_database(client):
+def set_database(users=None, groups=None, calls=None):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    if not groups:
+        c.execute("""CREATE TABLE groups (
+            id integer PRIMARY KEY,
+            card_id text NOT NULL,
+            title text NOT NULL,
+            category text NOT NULL,
+            restriction text NOT NULL,
+            region text NOT NULL,
+            platform text NOT NULL,
+            color integer NOT NULL,
+            is_subgroup text NOT NULL,
+            parent_group integer,
+            purpose text,
+            onboarding text,
+            date text NOT NULL,
+            status integer NOT NULL,
+            user_id integer NOT NULL
+            )""")
+    if not calls:
+        c.execute("""CREATE TABLE calls (
+            id text PRIMARY KEY,
+            chat_id integer NOT NULL,
+            card_id text NOT NULL,
+            title text NOT NULL,
+            date text NOT NULL,
+            time text NOT NULL,
+            duration text NOT NULL,
+            description text,
+            agenda_link text,
+            calendar_url text NOT NULL,
+            link text,
+            user_id text NOT NULL,
+            status integer NOT NULL
+            )""")
+    if not users:
+        c.execute("""CREATE TABLE users (
+            id integer PRIMARY KEY,
+            first text,
+            last text,
+            username text,
+            activator_id integer NOT NULL
+            )""")
+    conn.commit()
+    conn.close()
+
+
+def set_sheet(client):
     """
     Setup spreadsheet database if none exists yet.
     Will save the spreadsheet ID to env_variables.json
@@ -229,11 +284,10 @@ def set_database(client):
                         "PLATFORM", "COLOR", "PURPOSE", "ONBOARDING", "TRELLO LINK", "DATE OF ARCHIVAL"])
     print("SETTINGS: Created Archive Sheet")
 
-    # CREATE DELETED SHEET
-    deleted = spreadsheet.add_worksheet(title="Deleted", rows="150", cols="11")
-    deleted.append_row(["TITLE", "CATEGORY", "REGION", "ADMINS", "PLATFORM", "COLOR",
-                        "RESTRICTION", "PURPOSE", "ONBOARDING", "DATE OF DELETION", "DELETED BY"])
-    print("SETTINGS: Created Deleted Sheet")
+    # CREATE LOGS SHEET
+    deleted = spreadsheet.add_worksheet(title="Logs", rows="500", cols="4")
+    deleted.append_row(["TIMESTAMP", "USER ID", "ACTION", "GROUP"])
+    print("SETTINGS: Created Logs Sheet")
 
     # DELETE PRE-EXISTING SHEET
     sheet = spreadsheet.get_worksheet(0)

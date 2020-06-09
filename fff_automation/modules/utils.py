@@ -150,8 +150,12 @@ def getKeysByValue(dictOfElements, valueToFind):
 
 
 def dump_pkl(method, obj):
-    joblib.dump(obj, "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method,
-                                                                           obj.chat_id, obj.user_id))
+    if isinstance(obj, Group):
+        chat_id = obj.id
+    else:
+        chat_id = obj.chat_id
+    joblib.dump(
+        obj, "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, chat_id, obj.user_id))
 
 
 def load_pkl(method, chat_id, user_id):

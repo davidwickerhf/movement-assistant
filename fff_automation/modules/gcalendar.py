@@ -78,4 +78,7 @@ def add_event(date, time, duration, title, description, group, color):
 def delete_event(event_id):
     calendar_id = settings.get_var(key='CALENDAR_ID', default='primary')
     print("CALENDAR: Delete Event: Id: ", event_id)
-    service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+    try:
+        service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+    except:
+        print('GCALENDAR: Error in Deleting Call Event')

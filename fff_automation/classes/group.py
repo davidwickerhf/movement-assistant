@@ -17,22 +17,44 @@ class Group():
         onboarding: String, description of the onboarding procedure for the group
     """
 
-    def __init__(self, chat_id, title, admins, platform, user_id, message, category="", region="", restriction="", is_subgroup=False, parentgroup="", purpose="", onboarding="", link='', date='', pgroup_last_index=1):
-        self.chat_id = chat_id
+    def __init__(self,
+                 id='',
+                 card_id='',
+                 title='',
+                 category='',
+                 restriction='',
+                 region='',
+                 platform='',
+                 color='',
+                 is_subgroup='',
+                 parentgroup='',
+                 purpose='',
+                 onboarding='',
+                 date='',
+                 status=0,
+                 user_id='',
+                 users='',
+                 message='',
+                 pgroup_last_index='',
+                 ):
+        self.id = id
+        self.card_id = card_id
         self.title = title
-        self.admins = admins
-        self.platform = platform
-        self.user_id = user_id
-        self.message = message
         self.category = category
-        self.region = region
         self.restriction = restriction
+        self.region = region
+        self.platform = platform
+        self.color = color
         self.is_subgroup = is_subgroup
         self.parentgroup = parentgroup
         self.purpose = purpose
         self.onboarding = onboarding
-        self.link = link
         self.date = date
+        self.status = status
+        self.user_id = user_id
+
+        self.users = users
+        self.message = message
         self.pgroup_last_index = pgroup_last_index
 
     def print_arguments(self):

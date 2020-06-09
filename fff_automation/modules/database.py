@@ -3,66 +3,46 @@ import os
 import json
 import pickle
 from oauth2client.service_account import ServiceAccountCredentials
-from fff_automation.modules import gcalendar
-from fff_automation.modules import trelloc
-from fff_automation.modules import settings
-from fff_automation.modules import utils
+from fff_automation.modules import gcalendar, trelloc, settings, utils, sheet
+from fff_automation.classes.group import Group
+from fff_automation.classes.call import Call
+from fff_automation.classes.user import User
 from datetime import datetime
+import sqlite3
 
-if not (os.path.isfile('fff_automation/secrets/sheet_token.pkl') and os.path.getsize('fff_automation/secrets/sheet_token.pkl') > 0):
-    # use creds to create a client to interact with the Google Drive API
-    scope = [
-        'https://spreadsheets.google.com/feeds',
-        'https://www.googleapis.com/auth/drive',
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive']
-    # CREDENTIALS HAVE NOT BEEN INITIALIZED BEFORE
-    client_secret = os.environ.get('CLIENT_SECRET')
-    if client_secret == None:
-        # CODE RUNNING LOCALLY
-        print('DATABASE: Resorted to local JSON file')
-        with open('fff_automation/secrets/client_secret.json') as json_file:
-            client_secret_dict = json.load(json_file)
-    else:
-        # CODE RUNNING ON SERVER
-        client_secret_dict = json.loads(client_secret)
-        print("JSON CLIENT SECRET:  ", type(client_secret_dict))
-
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        client_secret_dict, scope)
-    pickle.dump(creds, open(
-        'fff_automation/secrets/sheet_token.pkl', 'wb'))
-
-creds = pickle.load(
-    open("fff_automation/secrets/sheet_token.pkl", "rb"))
-client = gspread.authorize(creds)
-
-# IF NO SPREADSHEET ENV VARIABLE HAS BEEN SET, SET UP NEW SPREADSHEET
-if settings.get_var('SPREADSHEET') == -1:
-    print("DATABASE: Create new database")
-    settings.set_database(client)
-print("DATABASE: id == ", settings.get_var('SPREADSHEET'))
-
-SPREADSHEET = settings.get_var('SPREADSHEET')
-spreadsheet = client.open_by_key(SPREADSHEET)
-groupchats = spreadsheet.get_worksheet(0)
-archive = spreadsheet.get_worksheet(1)
-deleted = spreadsheet.get_worksheet(2)
+REGULAR, ARCHIVED, DELETED = range(3)
 
 
 def save_group(group):
+    # REGISTER ALL USERS
+    users = []
+    for member in group.users:
+        user = member.user
+        first = 'N/A'
+        last = 'N/A'
+        username = 'N/A'
+        if user.first_name != None:
+            first = user.first_name
+        if user.last_name != None:
+            last = user.last_name
+        if user.username != None:
+            username = user.username
+        obj = User(
+            id=user.id,
+            first=first,
+            last=last,
+            username=username,
+            activator_id=group.user_id
+        )
+        commit_user(obj)
 
-    # try:
     # GET GROUP ADMINS
     admins_string = ""
-    for chatMemeber in group.admins:
+    for chatMemeber in group.users:
         print("DATABASE: Getting group admins")
-        user = chatMemeber.user
-        try:
-            admins_string = admins_string + "@" + user.username + "; "
-        except:
-            if user.first_name != None and user.last_name != None:
-                admins_string = admins_string + user.first_name + " " + user.last_name + "; "
+        if chatMemeber.status in ['creator', 'administrator']:
+            user = chatMemeber.user
+            admins_string += "{}; ".format(user.name)
 
     admins_string = admins_string[:-2]
     print("DATABASE: Got Admins")
@@ -84,23 +64,19 @@ def save_group(group):
     card_url = card_info[1]
     print("DATABASE: Got Trello Card Info")
 
-    # CREATE NEW WORKSHEET
-    try:
-        calls_sheet = spreadsheet.worksheet(str(group.chat_id))
-    except:
-        print("DATABASE: Creating New Sheet for new group")
-        calls_sheet = spreadsheet.add_worksheet(
-            title=str(group.chat_id), rows="1000", cols="1")
-        calls_sheet.append_row(["EVENT ID", "CHAT ID", "CARD ID", "GROUP", "TITLE", "DATE", "TIME", "DURATION",
-                                "DESCRIPTION", "AGENDA LINK", "CALENDAR LINK", "CARD LINK", "USER ID"])
-
     # SAVE GROUP IN DATABASE
+    # Save Variables in Group Obj
+    group.card_id = card_id
+    group.color = color_id
+    group.is_subgroup = str(group.is_subgroup)
+    commit_group(group)
     print("DATABASE: Saved group")
-    groupchats.append_row([group.chat_id, card_id, group.title, group.category, group.region, admins_string,
-                           group.platform, color_id, group.restriction, group.is_subgroup, group.parentgroup, group.purpose, group.onboarding, card_url, group.link])
 
     # SAVE IN KUMA BOARD
 
+    # LOG ACTION
+    sheet.log(str(utils.now_time()), group.user_id,
+              'ACTIVATE GROUP', group.title)
     return card_url
 
 
@@ -114,100 +90,63 @@ def update_group(chat_id, title, admins, category="", level="",
     # function is not complete
 
 
-def archive_group(chat_id, username):
+def archive_group(chat_id, user_id):
     print("DATABASE: Archive Group Started")
-    group_info = find_row_by_id(chat_id)[0]
-    group_info.append(str(utils.now_time()))
+    group = find_row_by_id(chat_id)[0]
+    group.status = ARCHIVED
     # ADD GROUP INFO TO ARCHIVE
-    archive.append_row(group_info)
+    commit_group(group)
     # function is not complete
 
 
-def delete_group(chat_id, username):
+def delete_group(chat_id, user_id):
     print("DATABASE: Delete Group Started")
-    row = find_row_by_id(item_id=chat_id)[0]
-    print("DATABASE: Got row number")
-    group_info = groupchats.row_values(row)
-    print("DATABASE: Got Row info")
-    try:
-        calls = spreadsheet.worksheet(str(chat_id))
-        print("DATABASE: Got calls worksheet")
+    group = find_row_by_id(item_id=chat_id)[0]
+    print("DATABASE: Got Group info")
 
-        # DELETE CALENDAR AND TRELLO CALL EVENTS
-        events_info = calls.get_all_values()
-        events_info.pop(0)
-        print("DATABASE: Event Info: ", events_info)
-        for event in events_info:
-            print("DATABASE: Event", event)
-            gcalendar.delete_event(event[0])
-            trelloc.delete_call(event[2])
-
-        # DELETE LINKED CALL SHEET
-        spreadsheet.del_worksheet(calls)
-
-    except:
-        print("DATABASE: No Calls sheet found")
+    calls = find_row_by_id(chat_id, table='calls', field='chat_id')
+    for call in calls:
+        print("DATABASE: Event", call)
+        gcalendar.delete_event(call.id)
+        trelloc.delete_call(call.card_id)
+        delete_record(item_id=call.id, table='calls')
 
     # DELETE CARD IN TRELLO
-    # Get Children
-    children_row = find_row_by_id(item_id=chat_id, col=11)
+    # Get Children Card ids
+    children = find_row_by_id(item_id=chat_id, field='parent_group')
+    print("DATABASE:  Children: ", children, " Type: ", type(children))
     children_cards = []
-    children = []
-    if children_row[0] != -1:
-        for child_row in children_row:
-            children.append(groupchats.row_values(child_row))
-        if isinstance(children[0], list):
-            for child in children:
-                child_card_id = get_group_card(child[0])
-                if child_card_id != -1:
-                    children_cards.append(child_card_id)
-        else:
-            children_cards.append(children[1])
+    if children[0] != None:
+        for child in children:
+            children_cards.append(child.card_id)
+            # DELETE CHILDREN LINKS IN DATABASE
+            child.parentgroup = ''
+            child.is_subgroup = 'FALSE'
+            commit_group(child)
     print('DATABASE: delete_group(): Children Cards: ', children_cards)
 
     # Get Parent
-    parent_id = groupchats.row_values(
-        find_row_by_id(item_id=chat_id)[0])[10]
+    parent_id = group.parentgroup
     parent_card = get_group_card(parent_id)
-    siblings = find_row_by_id(item_id=parent_id, col=11)
+    siblings = find_row_by_id(item_id=parent_id, field='parent_group')
+    for sibling in siblings:
+        if sibling.id == chat_id:
+            siblings.remove(sibling)
     print('DATABASE: Get Parent: ', parent_id, ' ', parent_card, ' ', siblings)
 
     # Delete card
-    card_id = get_group_card(chat_id)
-    trelloc.delete_group(card_id, parent_card, children_cards)
+    card_id = group.card_id
+    trelloc.delete_group(card_id, parent_card, children_cards, siblings)
     print("DATABASE: Deleted Trello card")
 
-    # DELETE CHILDREN LINKS IN DATABASE
-    print("DATABASE:  Children: ", children, " Type: ", type(children))
-    if children_row[0] != -1:
-        for child in children_row:
-            print('DATABASE: delete_group(): Child: ', child)
-            groupchats.update_cell(child, 11, '')
-            groupchats.update_cell(child, 10, 'FALSE')
-    print("DATABASE:  Deleted children")
+    # REMOVE RECORD FROM GROUPS DATABASE
+    delete_record(chat_id, 'groups')
 
-    # DROP UNNECESSAY INFO
-    unwanted = [0, 1, 9, 12, 13]
-    for ele in sorted(unwanted, reverse=True):
-        del group_info[ele]
-    group_info.extend((utils.now_time().strftime("%Y/%m/%d %H:%M"), username))
-    print("DATABASE: Dropped info")
-
-    # SAVE INFO IN DELETE SHEET
-    deleted.append_row(group_info)
-
-    # REMOVE ROW FROM GROUPS DATABASE
-    groupchats.delete_row(find_row_by_id(item_id=chat_id)[0])
+    # LOG ACTION
+    sheet.log(str(utils.now_time()), user_id, 'DELETE GROUP', group.title)
 
 
 def save_call(call):
-    # GET CALLS WORKSHEET
-    try:
-        calls = spreadsheet.worksheet(str(call.chat_id))
-    except:
-        print("Chat is not registerred")
-        return -1
-
     # SAVE TO CALENDAR
     group_title = get_group_title(call.chat_id)
     group_color = get_group_color(call.chat_id)
@@ -217,88 +156,56 @@ def save_call(call):
     event_id = values[0]
     calendar_url = values[1]
 
-    # DURATION STRING TO INT
-    seconds = int(call.duration)
-    hours = seconds / 3600
-    rest = seconds % 3600
-    minutes = rest / 60
-    duration_string = str(hours) + " Hours, " + str(minutes) + " Minutes"
-
     # SAVE IN TRELLO
     values = trelloc.add_call(call.title, get_group_title(group_id=call.chat_id), get_group_card(
         group_id=call.chat_id), call.date, call.time, call.duration, call.description, call.agenda_link, calendar_url, call.username)
     trello_url = values[1]
     card_id = values[0]
 
-    # SAVE EVENT IN DATABASE
+    # FORMAT DATE STRINGS
     date_string = datetime.strftime(call.date, '%Y/%m/%d')
     time_string = datetime.strftime(
         utils.str2datetime(str(call.time)), '%H:%M:%S')
-    calls.append_row([event_id, call.chat_id, card_id, group_title, call.title, date_string, time_string,
-                      duration_string, call.description, call.agenda_link, call.link, calendar_url, trello_url, call.user_id])
+
+    # SAVE EVENT IN DATABASE
+    # Save Variables in Call Obj
+    call.id = event_id
+    call.date = date_string
+    call.time = time_string
+    call.card_id = card_id
+    call.calendar_url = calendar_url
+    commit_call(call)
     print("Saved call in database")
+
+    sheet.log(str(utils.now_time()), call.user_id, 'NEW CALL', group_title)
     return [calendar_url, trello_url]
 
 
-def find_row_by_id(sheet=groupchats, item_id="", col=1):
-    print("DATABASE: find_row_by_id()")
-    if(sheet == "groups"):
-        sheet = groupchats
-    elif(sheet == "calls"):
-        sheet = spreadsheet.worksheet(str(item_id))
-        col = 2
-
-    column = sheet.col_values(col)
-    rows = []
-    for num, cell in enumerate(column):
-        if str(cell) == str(item_id):
-            rows.append(num + 1)
-    if rows == []:
-        rows.append(-1)
-    return rows
-
-
-def get_group_title(group_id, sheet=groupchats):
+def get_group_title(group_id):
     print("DATABASE: get_group_title()")
-    row = find_row_by_id(sheet, group_id)[0]
-    group_title = sheet.cell(row, 3).value
+    obj = find_row_by_id(group_id)[0]
+    group_title = obj.title
     return group_title
 
 
-def get_group_color(group_id, sheet=groupchats):
+def get_group_color(group_id):
     print("DATABASE: get_group_color()")
-    row = find_row_by_id(sheet, group_id)[0]
-    group_color = sheet.cell(row, 8).value
+    obj = find_row_by_id(group_id)[0]
+    group_color = obj.color
     return group_color
 
 
-def get_group_card(group_id, sheet=groupchats):
+def get_group_card(group_id):
     print("DATABASE: get_group_card()")
-    row = find_row_by_id(sheet, group_id)[0]
-    if row == -1:
-        return row
-    card_id = sheet.cell(row, 2).value
+    obj = find_row_by_id(group_id)[0]
+    if obj == None:
+        return None
+    card_id = obj.card_id
     return card_id
-
-
-def get_call_card(group_id, index=0):
-    sheet = spreadsheet.worksheet(str(group_id))
-    try:
-        row = sheet.row_values(index)
-        card_id = sheet.cell(row, 3).value
-    except:
-        card_id = -1
-    return card_id
-
-
-def get_all_rows(sheet=groupchats):
-    rows = sheet.get_all_values()
-    rows.pop(0)
-    return rows
 
 
 def rotate_groups(first_index, direction, size=5):
-    groups = get_all_rows()
+    groups = find_row_by_id()
     print("DATABASE: rotate_groups(): Groups: ", groups)
     if len(groups) <= size:
         return [groups, first_index]
@@ -324,3 +231,190 @@ def rotate_groups(first_index, direction, size=5):
     print("DATABASE - Rotate Groups: ", rotated_groups,
           " | Final Index: ", final_index)
     return [rotated_groups, final_index]
+
+
+def commit_group(obj):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    if isinstance(obj, Group):
+        c.execute('''INSERT OR REPLACE INTO groups(
+            id,
+            card_id,
+            title,
+            category,
+            restriction,
+            region,
+            platform,
+            color,
+            is_subgroup,
+            parent_group,
+            purpose,
+            onboarding,
+            date,
+            status,
+            user_id
+            ) VALUES (:id, :card_id, :title, :category, :restriction, :region, :platform, :color, :is_subgroup, :parent_group, :purpose, :onboarding, :date, :status, :user_id)''',
+                  {'id': obj.id,
+                   'card_id': obj.card_id,
+                   'title': obj.title,
+                   'category': obj.category,
+                   'restriction': obj.restriction,
+                   'region': obj.region,
+                   'platform': obj.platform,
+                   'color': obj.color,
+                   'is_subgroup': obj.is_subgroup,
+                   'parent_group': obj.parentgroup,
+                   'purpose': obj.purpose,
+                   'onboarding': obj.onboarding,
+                   'date': obj.date,
+                   'status': obj.status,
+                   'user_id': obj.user_id})
+    conn.commit()
+    conn.close()
+
+
+def commit_call(obj):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    if isinstance(obj, Call):
+        c.execute('''INSERT OR REPLACE INTO calls(
+            id,
+            chat_id,
+            card_id,
+            title,
+            date,
+            time,
+            duration,
+            description,
+            agenda_link,
+            calendar_url,
+            link,
+            user_id,
+            status) VALUES (:id, :chat_id, :card_id, :title, :date, :time, :duration, :description, :agenda_link, :calendar_url, :link, :user_id, :status)''', {
+            'id': obj.id,
+            'chat_id': obj.chat_id,
+            'card_id': obj.card_id,
+            'title': obj.title,
+            'date': obj.date,
+            'time': obj.time,
+            'duration': obj.duration,
+            'description': obj.description, 'agenda_link': obj.agenda_link, 'calendar_url': obj.calendar_url,
+            'link': obj.link,
+            'user_id': obj.user_id,
+            'status': obj.status, })
+    conn.commit()
+    conn.close()
+
+
+def commit_user(obj):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    if isinstance(obj, User):
+        c.execute("INSERT OR REPLACE INTO users(id, first, last, username, activator_id) VALUES (:id, :first, :last, :username, :activator_id)", {
+            'id': obj.id,
+            'first': obj.first,
+            'last': obj.last,
+            'username': obj.username,
+            'activator_id': obj.activator_id})
+    conn.commit()
+    conn.close()
+
+
+def find_row_by_id(item_id='', table='groups', field='id'):
+    """
+    Return a list of group/call/user objects that match the query of the item_id.
+    Returns [None] if there is no result
+    """
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    if item_id == '':
+        sqlstr = 'SELECT * FROM {}'.format(table)
+        c.execute(sqlstr)
+    else:
+        sqlstr = "SELECT * FROM {} WHERE {}={}".format(table, field, item_id)
+        c.execute(sqlstr)
+    results = c.fetchall()
+    conn.close()
+    print('DATABASE: RESULT: ', results)
+    if results == []:
+        return [None]
+    if not isinstance(results[0], tuple):
+        results = [results]
+    items = []
+    for result in results:
+        if table == 'groups':
+            obj = Group(
+                id=result[0],
+                card_id=result[1],
+                title=result[2],
+                category=result[3],
+                restriction=result[4],
+                region=result[5],
+                platform=result[6],
+                color=result[7],
+                is_subgroup=result[8],
+                parentgroup=result[9],
+                purpose=result[10],
+                onboarding=result[11],
+                date=result[12],
+                status=result[13],
+                user_id=result[14]
+            )
+            items.append(obj)
+        elif table == 'calls':
+            obj = Call(
+                id=result[0],
+                chat_id=result[1],
+                card_id=result[2],
+                title=result[3],
+                date=result[4],
+                time=result[5],
+                duration=result[6],
+                description=result[7],
+                agenda_link=result[8],
+                calendar_url=result[9],
+                link=result[10],
+                user_id=result[11],
+                status=result[12],
+            )
+            items.append(obj)
+        elif table == 'users':
+            obj = User(
+                id=result[0],
+                first=result[1],
+                last=result[2],
+                username=result[3],
+                activator_id=result[4]
+            )
+            items.append(obj)
+    return items
+
+
+def delete_record(item_id, table, field='id'):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    sqlstr = "DELETE FROM {table} WHERE {field}=?".format(
+        table=table, field=field)
+    c.execute(sqlstr, (item_id,))
+    conn.commit()
+    conn.close()
+
+
+def setup():
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+    users = c.fetchone()
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+    groups = c.fetchone()
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+    calls = c.fetchone()
+    conn.close()
+    if None in (users, groups, calls):
+        print('DATABASE: Setting Up Database')
+        settings.set_database(users, groups, calls)
+    else:
+        print('DATABASE: DB already set up')
+
+
+setup()

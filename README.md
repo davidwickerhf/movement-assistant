@@ -37,16 +37,19 @@ After you fork and clone the development repository, you need to follow the step
 > If no such file is present in the secrets folder, create a new env_variables.json file (make sure the filename is exactly that) and insert the code below, pasting the different tokens/variables instead of insert_here:
 ```
 {
-    "SERVER_APP_DOMAIN": "insert_here"
+    "SERVER_APP_DOMAIN": "insert_here",
     "TRELLO_KEY": "insert_here",
     "TRELLO_TOKEN": "insert_here",
     "BOT_TOKEN": "insert_here",
-    "BOT_USERNAME": "insert_here",
+    "TELEGRAM_API_ID": "insert_here",
+    "TELEGRAM_API_HASH": "insert_here",
+    "TELEGRAM_PHONE_NUMBER": "insert_here",
     "CALENDAR_ID": "insert_here",
     "GDRIVE_EMAIL": "insert_here",
     "SPREADSHEET": "insert_here_if_available",
     "TRELLO_BOARD_ID": "insert_here_if_available"
-  }
+
+}
 ```
 - SERVER APP DOMAIN (The url that will be used as webhook to receive POST requests from the Telegram API)
 > Insert a value in SERVER APP DOMAIN only if you are running the code on a server like Heroku
@@ -54,7 +57,9 @@ After you fork and clone the development repository, you need to follow the step
 - TRELLO KEY
 - TRELLO TOKEN
 - TELEGRAM BOT TOKEN
-- TELEGRAM BOT USERNAME
+- TELEGRAM API ID (can be found at https://my.telegram.org/apps)
+- TELEGRAM API HASH (can be found at https://my.telegram.org/apps)
+- TELEGRAM PHONE NUMBER
 - GCALENDAR ID (this is either id of the calendar, which is found in the "Integrate Calendar" section of the settings of the calendar you want to access)
 - G DRIVE EMAIL (The email you want the database to be shared with)
 - SPREADSHEET (the Id of the database spreadsheet. This field should be left empty: "", if you don't have a correctly formatted database sheet yet)

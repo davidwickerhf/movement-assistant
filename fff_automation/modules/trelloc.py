@@ -157,31 +157,34 @@ def delete_group(card_id, parentcard_id="", childrencards_id=[], siblings=[]):
     print("TRELLO: Delete Group Card")
     card = get_card(card_id)
     # DELETE REFERENCE IN PARENT CARD
-    if parentcard_id not in ('', -1):
-        print("TRELLOC: delete_group(): Replacing Parent Description")
-        parent = get_card(parentcard_id)
-        description = re.sub(
-            "- {} -> {}".format(card.name, card.short_url), '', parent.description)
-        if siblings == [] or siblings == '' or siblings == -1:
-            description = description.replace('**Subgroups:**', '')
-            description = description.rstrip()
-        update_card(parentcard_id, desc=description)
+    try:
+        if parentcard_id not in ('', None):
+            print("TRELLOC: delete_group(): Replacing Parent Description")
+            parent = get_card(parentcard_id)
+            description = re.sub(
+                "- {} -> {}".format(card.name, card.short_url), '', parent.description)
+            print('TRELLOC: Siblings: ', siblings)
+            if siblings == []:
+                description = description.replace('**Subgroups:**', '')
+                description = description.rstrip()
+            update_card(parentcard_id, desc=description)
 
-    # DELETE CARD
-    card.delete()
-    print('TRELLOC: delete_group: Deleted Card')
+        # DELETE CARD
+        card.delete()
+        print('TRELLOC: delete_group: Deleted Card')
+    except:
+        print("TRELLOC: Error in Deleting Group Card")
 
     # DELETE REFERENCE IN CHILDREN CARDS
-    if childrencards_id != []:
-        for children_id in childrencards_id:
-            child = get_card(children_id)
-            print('TRELLOC: delete_group(): Editing Child Description')
-            description = child.description
-            string = "\\*+Parent Group:\\*+ https://trello.com/c/{}".format(
-                str(card_id))
-            description = re.sub(string, '', description)
-            description = description.rstrip()
-            update_card(children_id, desc=description)
+    for children_id in childrencards_id:
+        child = get_card(children_id)
+        print('TRELLOC: delete_group(): Editing Child Description')
+        description = child.description
+        string = "\\*+Parent Group:\\*+ https://trello.com/c/{}".format(
+            str(card_id))
+        description = re.sub(string, '', description)
+        description = description.rstrip()
+        update_card(children_id, desc=description)
 
 
 def add_call(title, groupchat, group_trello_id, date, time, duration, description, agenda_link, calendar_link, registred_by):

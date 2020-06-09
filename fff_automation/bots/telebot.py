@@ -39,7 +39,6 @@ CANCEL_DELETE_GROUP, CONFIRM_DELETE_GROUP, DOUBLE_CONFIRM_DELETE_GROUP = range(
 
 TIMEOUT = -2
 
-
 # CALL CONVERSATION MESSAGES TEXT
 save_group_message = "<b>TRANSPARENCY BOT</b> \nThank you for adding me to this chat! I am the FFF Transparency Bot and I'm managed by the [WG] Transparency! \nI can help your group by keeping track of planned calls.\nPlease follow this wizard to complete saving this group's informations in the database:\n\n<b>Select a Category for this group:</b>"
 save_group_alreadyregistered_message = "<b>TRANSPARENCY BOT</b>\nThis group has already been registered once, no need to do it again\nType /help tp get a list of available commands"
@@ -95,12 +94,17 @@ def save_group(update, context):
         update.message.chat.send_message(
             text="This command can be run only in group chats")
         return ConversationHandler.END
-    elif (database.find_row_by_id("groups", chat_id)[0] == -1):
-        admins = chat.get_administrators()
-
+    elif (database.find_row_by_id(chat_id)[0] == None):
+        # GET ALL USERS
+        users = chat.get_administrators()
         # SAVE GROUP INSTANCE IN PICKLE
-        group = Group(chat_id=chat_id, title=title, admins=admins,
-                      platform="Telegram", user_id=user_id, message=update.message)
+        group = Group(
+            id=chat_id,
+            title=title,
+            users=users,
+            platform="Telegram",
+            user_id=user_id,
+            message=update.message)
 
         # CREATE MARKUP FOR CATEOGORY CHOICE:
         markup = group_menu(
@@ -251,7 +255,7 @@ def is_subgroup(update, context):
         group.is_subgroup = True
 
         # SET NEW TEXT AND MARKAP FOR PARENT REQUEST
-        if len(database.get_all_rows()) > 0:
+        if database.find_row_by_id()[0] != None:
             print("BOT: Groups found")
             text = "Alright, select below the parent group of this group chat:"
             markup = subgroup_menu(
@@ -439,7 +443,7 @@ def subgroup_menu(group, direction, size=4):
     for group in rotated_groups:
         print("Check 2")
         row = []
-        group_id = group[0]
+        group_id = group.id
         print("TELEBOT: subgroup_menu(): Group Id: ", group_id)
         title = database.get_group_title(group_id)
         button = InlineKeyboardButton(text=title, callback_data=group_id)
@@ -468,7 +472,7 @@ def save_group_info(chat, group):
     print("BOT - Save Group Info: Made Kayboard")
 
     text = "<b>{}</b> has been saved in the database!".format(group.title)
-    utils.delete_pkl('newgroup', group.chat_id, group.user_id)
+    utils.delete_pkl('newgroup', group.id, group.user_id)
 
     chat.send_message(
         text=text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
@@ -489,7 +493,7 @@ def delete_group(update, context):
         update.message.chat.send_message(
             text="This command can be run only in group chats")
         return ConversationHandler.END
-    elif database.find_row_by_id(item_id=chat_id)[0] == -1:
+    elif database.find_row_by_id(item_id=chat_id)[0] == None:
         print("BOT - Delete Group: Group is not registerred")
         update.message.reply_text(
             text="This group isn't registerred yet, thus it can't be deleted. Please register this group with the following command:\n/newgroup - This command will take you through a wizard to register this group's information into the FFF Transparency Database.")
@@ -501,8 +505,11 @@ def delete_group(update, context):
             text="<b>WARNING</b>\nBy deleting a group, it's information will be erased from the database and from the Trello Board. All tied calls events will be deleted from both the Trello Board and Google Calendar. Be aware that this action cannot be undone. Use /archivegroup if you are simply archiving the group.\n\nAre you sure you want to delete this group permanently?", reply_markup=markup, parse_mode=ParseMode.HTML)
 
         # ADD GROUP TO PERSISTANCE
-        group = Group(chat_id, update.message.chat.title, update.message.chat.get_administrators(
-        ), 'Telegram', user.id, message)
+        group = Group(
+            id=chat_id,
+            user_id=user.id,
+            message=message
+        )
         utils.dump_pkl('deletegroup', group)
         return CONFIRM_DELETE_GROUP
     else:
@@ -526,6 +533,10 @@ def confirm_delete_group(update, context):
     group = utils.load_pkl('deletegroup', chat_id, user_id)
     if group == "" or group.user_id != user_id:
         # USER DOES NOT HAVE PERMISSION TO DELETE BOT
+        print('TELEBOT: delete_group(): User does not have permission. Group: ', group)
+        print('Group.user_id: ', group.user_id)
+        print('Query user: ', user_id)
+        query.answer()
         return CONFIRM_DELETE_GROUP
     else:
         query.answer()
@@ -601,7 +612,7 @@ def new_call(update, context):
         groupchat.send_message(
             text=new_call_onlygroups_message)
         return ConversationHandler.END
-    elif database.find_row_by_id(item_id=update.message.chat.id)[0] == -1:
+    elif database.find_row_by_id(item_id=update.message.chat.id)[0] == None:
         print("Chat is not registered yet")
         text = chat_not_registerred.format(
             new_group_description)
@@ -795,7 +806,6 @@ def format_input_argument(update, state, key, call):
 @send_typing_action
 def save_call_info(update, context, call):
     call.message.delete()
-    username = update.message.from_user.username
     message = update.message.chat.send_message(
         text="Saving call information... This might take a minute...")
 
