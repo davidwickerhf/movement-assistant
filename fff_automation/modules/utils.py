@@ -176,5 +176,3 @@ def delete_pkl(method, chat_id, user_id):
 
 def now_time():
     return datetime.now(tz=pytz.utc)
-
-    return datetime

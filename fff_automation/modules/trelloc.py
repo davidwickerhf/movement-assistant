@@ -6,6 +6,9 @@ from fff_automation.modules import settings, database
 import requests
 import json
 import re
+from datetime import datetime, timedelta
+from tzlocal import get_localzone
+import pytz
 
 
 TRELLO_KEY = settings.get_var('TRELLO_KEY')
@@ -210,13 +213,20 @@ def add_call(call):
             )[0].id
         )
     )
+    due = datetime.combine(call.date, call.time)
+    print("TRELLOC: Due Date: ", due)
 
+    local_tz = get_localzone()
+    print("TRELLO: Time Zone: ", local_tz)
+
+    duestr = datetime.utcfromtimestamp(due.timestamp()).isoformat()
     labels = [client.get_label(upcoming_id, board_id)]
     description = ""
 
     # CREATE TRELLO CARD
     newcard = planned_calls_list.add_card(
         name=call.title, desc=description, labels=labels, position='top')
+    update_card(newcard.id, due=duestr)
     print("TRELLO: Saved Call Card: ", newcard)
 
     # CREATE ATTACHMENTS

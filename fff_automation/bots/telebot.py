@@ -9,6 +9,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
 from functools import wraps
 from telegram.utils.helpers import mention_html
+from tzlocal import get_localzone
 import sys
 import traceback
 import json
@@ -20,6 +21,8 @@ from fff_automation.modules import utils
 from fff_automation.modules import database
 from fff_automation.classes.group import Group
 from fff_automation.classes.call import Call
+from fff_automation.classes.feedback import Feedback
+import pytz
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -36,10 +39,12 @@ GROUP_INFO, EDIT_GROUP, CATEGORY, REGION, RESTRICTION, IS_SUBGROUP, PARENT_GROUP
 # GLOBAL VARIABLES - DELETE GROUP CONVERSATION
 CANCEL_DELETE_GROUP, CONFIRM_DELETE_GROUP, DOUBLE_CONFIRM_DELETE_GROUP = range(
     3)
-
 TIMEOUT = -2
 
-# CALL CONVERSATION MESSAGES TEXT
+# GLOBAL VARIABLES - FEEDBACK CONVERSATION
+FEEDBACK_TYPE, ISSUE_TYPE, INPUT_FEEDBACK = range(3)
+
+# GROUP CONVERSATION MESSAGES TEXT
 save_group_message = "<b>TRANSPARENCY BOT</b> \nThank you for adding me to this chat! I am the FFF Transparency Bot and I'm managed by the [WG] Transparency! \nI can help your group by keeping track of planned calls.\nPlease follow this wizard to complete saving this group's informations in the database:\n\n<b>Select a Category for this group:</b>"
 save_group_alreadyregistered_message = "<b>TRANSPARENCY BOT</b>\nThis group has already been registered once, no need to do it again\nType /help tp get a list of available commands"
 new_group_description = "- /newgroup -> This command is run automatically once the bot is added to a groupchat. It will get some information about the group (such as group Title and admins) and save it onto the FFF Database.\n<code>/newgroup</code>"
@@ -50,8 +55,17 @@ chat_not_registerred = "<b>This group is not yet registerred in the database</b>
 input_argument_text = "<b>SCHEDULE A NEW CALL</b>\nFollow this wizard to schedule a new call!\n\nPlease reply to this message with the <b>{}</b> for the call you are registering\n\n[Step X out of X]"
 wrong_time_text = "<b>WARNING</b>\nThe Time you submitted is not recognized. Please submit a time for the call again with the following format:\n<code>hours:minutes | 15:00</code>\nAlso note that the time you input will be treated as GMT"
 wrong_date_text = "<b>WARNING</b>\nThe Date you submitted is not recognized. Please submit a date for the call again with the following format:\n<code>day/month/year | 15/03/2019</code>"
+past_date_text = "Please insert a date in the future. you cannot schedule calls for a past date."
+past_time_text = "Please insert a time in the future. You cannot schedule calls for a past time."
 text_input_argument = "<b>SCHEDULE A NEW CALL - ADD A {}</b>\nFollow this wizard to schedule a new call!\n\nPlease reply to this message with the <b>{}</b> for the call you are registering"
 cancel_add_call_text = "<b>CALL SCHEDULING CANCELLED</b>\nThe call hasn't been scheduled"
+
+# FEEDBACK CONVERSATION MESSAGES TEXT
+select_feedback_type = "Select below the type of <b>feedback</b> you are giving:"
+send_feedback_input = "Reply to this message with the feedback you want to send:"
+select_issue_type = "Select below the command you are having an <b>issue</b> with. If you are trying to report another issue, select 'Other'"
+send_issue_input = "Reply to this message describing the issye you have encountered in order to send your feedback:"
+cancel_feedback_text = "<b>FEEDBACK INPUT CANCELLED</b>\nNo feedback has been sent"
 
 
 def send_typing_action(func):
@@ -108,7 +122,7 @@ def save_group(update, context):
         )
 
         # CREATE MARKUP FOR CATEOGORY CHOICE:
-        markup = group_menu(
+        markup = create_menu(
             [interface.trelloc.WORKING_GROUP, interface.trelloc.DISCUSSION_GROUP, interface.trelloc.PROJECT], [interface.trelloc.WORKING_GROUP, interface.trelloc.DISCUSSION_GROUP, interface.trelloc.PROJECT])
 
         # SEND MESSAGE WITH INTRO AND REQUEST OF CATEGORY
@@ -153,7 +167,7 @@ def category(update, context):
 
     # SET NEW TEXT AND MARKAP FOR LEVEL REQUEST
     text = "Ok, cool!\nNow please select the <b>region</b> this group concerns: "
-    markup = group_menu(["Africa", "Asia", "North America", "South America", "Oceania", "Europe", "Global"], [
+    markup = create_menu(["Africa", "Asia", "North America", "South America", "Oceania", "Europe", "Global"], [
         interface.trelloc.regions['Africa'],
         interface.trelloc.regions['Asia'],
         interface.trelloc.regions['North America'],
@@ -193,10 +207,10 @@ def region(update, context):
     # SET NEW TEXT AND MARKAP FOR RESTRICTION REQUEST
     text = "Cool! Next, please select the <b>access level</b> for this this group: \n\n<b>Open</b> - Any fff activist working on the international level is allowed to enter\n\n<b>Restricted</b> - Some level of restriction (example: n. activists per country/region\n\n<b>Closed</b> - The group is closed"
 
-    markup = group_menu(["Open", "Restricted", "Closed"],
-                        [interface.trelloc.restrictions['Open'],
-                         interface.trelloc.restrictions['Restricted'],
-                         interface.trelloc.restrictions['Closed']])
+    markup = create_menu(["Open", "Restricted", "Closed"],
+                         [interface.trelloc.restrictions['Open'],
+                          interface.trelloc.restrictions['Restricted'],
+                          interface.trelloc.restrictions['Closed']])
     query.edit_message_text(text, parse_mode=ParseMode.HTML)
     query.edit_message_reply_markup(markup)
     group.message = query.message
@@ -226,7 +240,7 @@ def restriction(update, context):
 
     # SET NEW TEXT AND MARKAP FOR IS SUBGOUP REQUEST
     text = "Awesome. Is this chat a sub-group of any working/discussion group in fridays for future? Answer by clicking the buttons below:"
-    markup = group_menu(["No", "Yes"], [0, 1])
+    markup = create_menu(["No", "Yes"], [0, 1])
     query.edit_message_text(text, parse_mode=ParseMode.HTML)
     query.edit_message_reply_markup(markup)
     group.message = query.message
@@ -270,7 +284,7 @@ def is_subgroup(update, context):
         else:
             print("BOT: No groups available for parents")
             text = "Mmh... It seams no other group has been registerred yet... To add a parent to a group, make sure you register that group chat first!"
-            markup = group_menu(["Next"], [0])
+            markup = create_menu(["Next"], [0])
             query.edit_message_text(text, parse_mode=ParseMode.HTML)
             query.edit_message_reply_markup(markup)
             group.message = query.message
@@ -282,7 +296,7 @@ def is_subgroup(update, context):
 
         # SET NEW TEXT AND MARKAP FOR PURPOSE REQUEST
         text = "Alright, last two steps! Please reply to this message with a short description of the purpose and mandate of the group.\nYou can skip this step by clicking the button below."
-        markup = group_menu(["Skip"], ["skip"])
+        markup = create_menu(["Skip"], ["skip"])
         query.edit_message_text(text, parse_mode=ParseMode.HTML)
         query.edit_message_reply_markup(markup)
         group.message = query.message
@@ -320,7 +334,7 @@ def parent_group(update, context):
 
         # SET NEW TEXT AND MARKAP FOR PURPOSE REQUEST
         text = "Great! Last two steps! Please reply to this message with a short description of the purpose and mandate of the group.\nYou can skip this step by clicking the button below."
-        markup = group_menu(["Skip"], ["skip"])
+        markup = create_menu(["Skip"], ["skip"])
         query.edit_message_text(text, parse_mode=ParseMode.HTML)
         query.edit_message_reply_markup(markup)
         group.message = query.message
@@ -352,7 +366,7 @@ def purpose(update, context):
         query = update.callback_query
         query.answer()
         text = "Alright, we'll skip that. Last question:\nPlease reply to this message with a description of who is allowed access to this group and how can activists join this group. You can skip this step as well with the button below."
-        markup = group_menu(["Skip"], ["skip"])
+        markup = create_menu(["Skip"], ["skip"])
         query.edit_message_text(text, parse_mode=ParseMode.HTML)
         query.edit_message_reply_markup(markup)
         group.message = query.message
@@ -363,7 +377,7 @@ def purpose(update, context):
         group.purpose = update.message.text
         # SET NEW TEXT AND MARKAP FOR PURPOSE REQUEST
         text = "Great! Last step!\nPlease reply to this message with a description of who is allowed access to this group and how can activists join this group. You can skip this step as well with the button below."
-        markup = group_menu(["Skip"], ["skip"])
+        markup = create_menu(["Skip"], ["skip"])
         group.message.edit_text(
             text=text, parse_mode=ParseMode.HTML, reply_markup=markup)
         utils.dump_pkl('newgroup', group)
@@ -411,28 +425,6 @@ def onboarding(update, context):
 
 
 # GROUP UTILS ----------------------------------------
-
-def group_menu(button_titles, callbacks, cols=1):
-    print("BOT: group_menu()")
-    keyboard = []
-    index = 0
-    row = []
-    for title in button_titles:
-        keyboard_button = InlineKeyboardButton(
-            title, callback_data=callbacks[index])
-        if len(row) < cols:
-            row.append(keyboard_button)
-        else:
-            keyboard.append(row)
-            row = []
-            row.append(keyboard_button)
-        index += 1
-    if row != "":
-        keyboard.append(row)
-    markup = InlineKeyboardMarkup(keyboard)
-    return markup
-
-
 def subgroup_menu(group, direction, size=4):
     values = interface.rotate_groups(
         first_index=group.pgroup_last_index, direction=direction, size=size)
@@ -480,9 +472,9 @@ def save_group_info(chat, group):
     chat.send_message(
         text=text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     print("BOT - Save Group Info: Sent Reply")
+
+
 ####################### DELETE GROUP FUNCTIONS ##############################
-
-
 @run_async
 def delete_group(update, context):
     print("BOT: --- DELETE GROUP ---")
@@ -503,7 +495,7 @@ def delete_group(update, context):
         return ConversationHandler.END
     elif member.status == "creator":
         print("BOT - Delete Group: Command was sent by owner/admin")
-        markup = group_menu(['NO!', 'Yes, delete the group'], [0, 1])
+        markup = create_menu(['NO!', 'Yes, delete the group'], [0, 1])
         message = update.message.reply_text(
             text="<b>WARNING</b>\nBy deleting a group, it's information will be erased from the database and from the Trello Board. All tied calls events will be deleted from both the Trello Board and Google Calendar. Be aware that this action cannot be undone. Use /archivegroup if you are simply archiving the group.\n\nAre you sure you want to delete this group permanently?", reply_markup=markup, parse_mode=ParseMode.HTML)
 
@@ -548,7 +540,7 @@ def confirm_delete_group(update, context):
             return ConversationHandler.END
         elif query.data == str(1):
             # USER CLICKED DELETE BUTTON
-            markup = group_menu(['No, don\'t', 'Yes, delete it'], [0, 1])
+            markup = create_menu(['No, don\'t', 'Yes, delete it'], [0, 1])
             text = "Are you really, really sure you want to permanently delete this group's information?"
             query.edit_message_text(text=text, reply_markup=markup)
             group.message = query.message
@@ -588,9 +580,9 @@ def double_confirm_delete_group(update, context):
             # DELETE PERSISTENCE FILE
             utils.delete_pkl('deletegroup', chat_id, user_id)
             return ConversationHandler.END
+
+
 ####################### CALL CONVERSATION FUNCTIONS #########################
-
-
 @run_async
 @send_typing_action
 def new_call(update, context):
@@ -606,11 +598,13 @@ def new_call(update, context):
     print("Got chat id")
 
     if groupchat.id == user.id:
+        # CHAT IS USER
         print("Chat is user")
         groupchat.send_message(
             text=new_call_onlygroups_message)
         return ConversationHandler.END
     elif database.get(item_id=update.message.chat.id)[0] == None:
+        # CHAT IS NOT REGISTERED
         print("Chat is not registered yet")
         text = chat_not_registerred.format(
             new_group_description)
@@ -618,6 +612,7 @@ def new_call(update, context):
             text=text, parse_mode=ParseMode.HTML)
         return ConversationHandler.END
     else:
+        # EVERYTHING OK
         message_text = update.message.text + ' '
         print("Message Text: " + message_text)
         command = message_text[:message_text.find(' ') + 1]
@@ -699,6 +694,7 @@ def add_date(update, context):
     user_id = update.message.from_user.id
     call = utils.load_pkl('newcall', chat_id, user_id)
     if call == "" or user_id != call.user_id:
+        # USER DID NOT START CONVERSATION
         return ADD_DATE
 
     print("ADD CALL DATE")
@@ -707,8 +703,25 @@ def add_date(update, context):
     print("Date Text: " + date_text)
     if utils.str2date(date_text) != -1:
         # INPUT IS CORRECT
-        call.date = utils.str2date(date_text)
-        print("Date is valid: ", call.date)
+        date = utils.str2date(date_text)
+
+        # CHECK PAST DATE
+        now = datetime.now(tz=pytz.utc).date()
+        if date >= now:
+            # DATE IS IN THE FUTURE
+            call.date = date
+            print("Date is valid: ", call.date)
+        else:
+            # DATE IS IN THE PAST
+            keyboard = [[InlineKeyboardButton(
+                "Cancel", callback_data="cancel")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            call.message.delete()
+            call.message = update.message.reply_text(
+                text=past_date_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+            utils.dump_pkl('newcall', call)
+            return ADD_DATE
     else:
         # INPUT IS INCORRECT
         keyboard = [[InlineKeyboardButton("Cancel", callback_data="cancel")]]
@@ -746,7 +759,26 @@ def add_time(update, context):
     message_text = update.message.text
     if utils.str2time(message_text) != -1:
         # INPUT IS CORRECT
-        call.time = utils.str2time(message_text)
+        local_tz = get_localzone()
+        time = utils.str2time(message_text)
+        offset = timedelta(minutes=45)
+        now = datetime.now(tz=local_tz).astimezone(pytz.utc) - offset
+
+        if call.date == now.date():
+            if time >= now.time():
+                # TIME IS ACCEPTABLE
+                call.time = time
+            else:
+                # TIME IS IN THE PAST
+                keyboard = [[InlineKeyboardButton(
+                    "Cancel", callback_data="cancel")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                call.message.delete()
+                call.message = update.message.reply_text(
+                    text=past_time_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+                utils.dump_pkl('newcall', call)
+                return ADD_TIME
         print("Inputted time: ", str(call.time))
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
@@ -831,11 +863,263 @@ def save_call_info(update, context, call):
     print("Sent Reply")
 
 
+######################### FEEDBACK CONVERSATION FUNCTIONS ###############
+@run_async
+def feedback(update, context):
+    print("TELEBOT: feedback()")
+    # Create Feedback Type Menu & Message Text
+    markup = create_menu([
+        interface.githubc.label_keys.get(interface.githubc.ISSUE),
+        interface.githubc.label_keys.get(interface.githubc.FEATURE_REQUEST),
+        interface.githubc.label_keys.get(interface.githubc.FEEDBACK),
+        interface.githubc.label_keys.get(interface.githubc.QUESTION),
+        'Cancel'
+    ], [
+        interface.githubc.ISSUE,
+        interface.githubc.FEATURE_REQUEST,
+        interface.githubc.FEEDBACK,
+        interface.githubc.QUESTION,
+        'cancel_feedback'
+    ])
+
+    # Create Feedback Obj
+    feedback = Feedback(
+        user_id=update.effective_user.id,
+        chat_id=update.effective_chat.id,
+        date=utils.now_time()
+    )
+
+    # Send Message
+    feedback.message = update.message.chat.send_message(
+        text=select_feedback_type, parse_mode=ParseMode.HTML, reply_markup=markup)
+
+    # Save feedback obj in pickle
+    utils.dump_pkl('feedback', feedback)
+    return FEEDBACK_TYPE
+
+
+@run_async
+def feedback_type(update, context):
+    print('TELEBOT: feedback_type()')
+    # Retrieve Feedback Obj from pickle
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    feedback = utils.load_pkl('feedback', chat_id, user_id)
+
+    if feedback == '' or user_id != feedback.user_id:
+        print('TELEBOT: feedback_type: Wrong User')
+        return FEEDBACK_TYPE
+
+    # Check if callback-query is 'cancel_feedback'
+    if update.callback_query.data == 'cancel_feedback':
+        cancel_feedback(update, context)
+        return ConversationHandler.END
+
+    # Save selected type in obj
+    feedback.type = int(update.callback_query.data)
+    print('TELEBOT: feedback_type(): Got Feedback Type: ', feedback.type)
+    if feedback.type == interface.githubc.ISSUE:
+        # TYPE IS ISSUE
+        # Send issue type menu
+        markup = create_menu(button_titles=[
+            interface.githubc.issue_types.get(interface.githubc.ACTIVATE),
+            interface.githubc.issue_types.get(interface.githubc.ALL_GROUPS),
+            interface.githubc.issue_types.get(interface.githubc.ARCHIVE_GROUP),
+            interface.githubc.issue_types.get(
+                interface.githubc.UNARCHIVE_GROUP),
+            interface.githubc.issue_types.get(interface.githubc.DELETE_GROUP),
+            interface.githubc.issue_types.get(interface.githubc.NEW_CALL),
+            interface.githubc.issue_types.get(interface.githubc.ALL_CALLS),
+            interface.githubc.issue_types.get(interface.githubc.DELETE_CALL),
+            interface.githubc.issue_types.get(interface.githubc.TRUST_USER),
+            interface.githubc.issue_types.get(interface.githubc.OTHER),
+            'Cancel'
+        ], callbacks=[
+            interface.githubc.ACTIVATE,
+            interface.githubc.ALL_GROUPS,
+            interface.githubc.ARCHIVE_GROUP,
+            interface.githubc.UNARCHIVE_GROUP,
+            interface.githubc.DELETE_GROUP,
+            interface.githubc.NEW_CALL,
+            interface.githubc.ALL_CALLS,
+            interface.githubc.DELETE_CALL,
+            interface.githubc.TRUST_USER,
+            interface.githubc.OTHER,
+            'cancel_feedback'
+        ], cols=2)
+        print('TELEBOT: issue_type(): Created Markup')
+        update.callback_query.edit_message_text(
+            select_issue_type, parse_mode=ParseMode.HTML)
+        update.callback_query.edit_message_reply_markup(markup)
+        feedback.message = update.callback_query.message
+        # Save feedback obj in pickle
+        utils.dump_pkl('feedback', feedback)
+        return ISSUE_TYPE
+    else:
+        # TYPE IS EITHER QUESTION, FEEDBACK OR FEATURE REQUEST
+        # Send message asking for input
+        print('TELEBOT: Feedback is NOT an issue')
+        markup = create_menu('Canel', 'cancel_feedback')
+        update.callback_query.edit_message_text(send_feedback_input.format(
+            interface.githubc.label_keys.get(feedback.type)), parse_mode=ParseMode.HTML)
+        feedback.message = update.callback_query.message
+        # Save feedback obj in pickle
+        utils.dump_pkl('feedback', feedback)
+        return INPUT_FEEDBACK
+
+
+@run_async
+def issue_type(update, context):
+    print('TELEBOT: issue_feedback()')
+    # Retrieve feedback obj from pickle
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    feedback = utils.load_pkl('feedback', chat_id, user_id)
+    print('TELEBOT: issue_type')
+
+    if feedback == '' or user_id != feedback.user_id:
+        return ISSUE_TYPE
+
+    # Check if callback-query is 'cancel_feedback'
+    if update.callback_query.data == 'cancel_feedback':
+        cancel_feedback(update, context)
+        return ConversationHandler.END
+
+    # Save selected status (issue type) in obj
+    feedback.issue_type = int(update.callback_query.data)
+
+    # Send message requesting issue description
+    markup = create_menu('Canel', 'cancel_feedback')
+    update.callback_query.edit_message_text(send_issue_input.format(
+        interface.githubc.label_keys.get(feedback.type)), parse_mode=ParseMode.HTML)
+    feedback.message = update.callback_query.message
+    # Save feedback obj in pickle
+    utils.dump_pkl('feedback', feedback)
+    return INPUT_FEEDBACK
+
+
+@run_async
+@send_typing_action
+def input_feedback(update, context):
+    print('TELEBOT: issue_type()')
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    feedback = utils.load_pkl('feedback', chat_id, user_id)
+
+    if feedback == '' or user_id != feedback.user_id:
+        return INPUT_FEEDBACK
+
+    # Processing Message
+    feedback.message.delete()
+    feedback.message = update.message.reply_text('Processing...')
+
+    # Save issue
+    message_text = save_feedback(feedback, update)
+
+    # Send message to developer
+    devs = settings.get_var('DEVS')
+    for dev_id in devs:
+        context.bot.send_message(dev_id, message_text,
+                                 parse_mode=ParseMode.HTML)
+
+    # Send confirm message in chat
+    feedback.message.delete()
+    text = '{} thank you for your feedback! Your input has been sent to my developers'.format(
+        update.effective_user.name)
+    update.effective_chat.send_message(text, parse_mode=ParseMode.HTML)
+
+    # Delete Persistence File
+    utils.delete_pkl('feedback', chat_id, user_id)
+    return ConversationHandler.END
+
+
+def save_feedback(feedback, update):
+    # Format feedback body
+    type_int = feedback.get_type()
+    issue_type_int = feedback.get_issue_type()
+    body = '''**{} by {}:**
+    **Issue Type:** {}
+    **Recorded on:** {}
+    **User id:** {}
+    **Chat id:** {}
+    **Chat Name:** {}
+    **Issue Body:** {}'''.format(
+        interface.githubc.label_keys.get(type_int),
+        update.effective_user.name,
+        interface.githubc.issue_types.get(issue_type_int),
+        feedback.date,
+        feedback.user_id,
+        feedback.chat_id,
+        update.effective_chat.title,
+        update.message.text)
+    feedback.body = body
+    feedback.title = '{} by {}'.format(
+        interface.githubc.label_keys.get(feedback.type), update.effective_user.name,)
+
+    # Save feedback in database / GitHub
+    feedback = interface.feedback(feedback)
+
+    # Send message to developers
+    message = '<b>{} by {}</b>:\n\n<b>Issue Type:</b> {}\n<b>Recorded on:</b> {}\n<b>User id:</b> {}\n<b>Chat id:</b> {}\n<b>Chat Name:</b> {}\n<b>Issue Body:</b> {}\n<b>Issue Url</b>: {}\n<b>Issue Json:</b> {}'.format(
+        interface.githubc.label_keys.get(feedback.type),
+        mention_html(update.effective_user.id,
+                     update.effective_user.first_name),
+        interface.githubc.issue_types.get(feedback.issue_type),
+        feedback.date,
+        feedback.user_id,
+        feedback.chat_id,
+        update.effective_chat.title,
+        update.message.text,
+        feedback.url,
+        feedback.json)
+    return message
+
+
+@run_async
+@send_typing_action
+def cancel_feedback(update, context):
+    # GET CALL SAVED IN PERSISTANCE FILE
+    chat_id = update.effective_chat.id
+    user_id = update.callback_query.from_user.id
+    feedback = utils.load_pkl('feedback', chat_id, user_id)
+    update.callback_query.answer()
+    if feedback == "" or user_id != feedback.user_id:
+        return
+    else:
+        print("CANCEL PRESSED")
+        feedback.message.edit_text(
+            text=cancel_feedback_text, parse_mode=ParseMode.HTML)
+        utils.delete_pkl('feedback', chat_id, user_id)
+    return ConversationHandler.END
+
+
+################################### UTIlS ############
+def create_menu(button_titles, callbacks, cols=1):
+    print("BOT: menu()")
+    keyboard = []
+    index = 0
+    row = []
+    for title in button_titles:
+        keyboard_button = InlineKeyboardButton(
+            title, callback_data=callbacks[index])
+        if len(row) < cols:
+            row.append(keyboard_button)
+        else:
+            keyboard.append(row)
+            row = []
+            row.append(keyboard_button)
+        index += 1
+    if row != "":
+        keyboard.append(row)
+    markup = InlineKeyboardMarkup(keyboard)
+    return markup
+
+
 def error(update, context):
     logger.warning('BOT: Update caused error: "%s"', context.error)
     # add all the dev user_ids in this list. You can also add ids of channels or groups.
     # MAKE THIS A ENV VARIABLE------------------------------------------------------------------------------------------
-    devs = [427293622]
+    devs = settings.get_var('DEVS')
     # we want to notify the user of this problem. This will always work, but not notify users if the update is an
     # callback or inline query, or a poll update. In case you want this, keep in mind that sending the message
     # could fail
@@ -950,9 +1234,20 @@ def setup(token):
         fallbacks=[],
         conversation_timeout=timedelta(seconds=240),
     )
+    feedback_handler = ConversationHandler(
+        entry_points=[CommandHandler('feedback', feedback)],
+        states={
+            FEEDBACK_TYPE: [CallbackQueryHandler(feedback_type)],
+            ISSUE_TYPE: [CallbackQueryHandler(issue_type)],
+            INPUT_FEEDBACK: [MessageHandler(Filters.text, input_feedback)]
+        },
+        fallbacks=[CallbackQueryHandler(
+            cancel_feedback, pattern='cancel_feedback')],
+    )
     dp.add_handler(call_handler)
     dp.add_handler(group_handler)
     dp.add_handler(delete_group_handler)
+    dp.add_handler(feedback_handler)
     dp.add_error_handler(error)
 
     thread = Thread(target=dp.start, name='dispatcher')

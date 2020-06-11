@@ -3,7 +3,7 @@ import os
 import json
 import pickle
 from oauth2client.service_account import ServiceAccountCredentials
-from fff_automation.modules import gcalendar, trelloc, settings, utils, sheet, database
+from fff_automation.modules import gcalendar, trelloc, settings, utils, sheet, database, githubc
 from fff_automation.classes.group import Group
 from fff_automation.classes.call import Call
 from fff_automation.classes.user import User
@@ -142,11 +142,11 @@ def delete_group(group):
     group.siblings = siblings
     group.calls = calls
 
-    # REMOVE RECORD FROM GROUPS DATABASE
-    database.delete_record(group.id, 'groups')
-
     # SHEET INTERFACE
     sheet.delete_group(group)
+
+    # REMOVE RECORD FROM GROUPS DATABASE
+    database.delete_record(group.id, 'groups')
 
 
 def save_call(call):
@@ -220,3 +220,10 @@ def rotate_groups(first_index, direction, size=5):
     print("DATABASE - Rotate Groups: ", rotated_groups,
           " | Final Index: ", final_index)
     return [rotated_groups, final_index]
+
+
+def feedback(feedback):
+    print('INTERFACE: - CREATE ISSUE - ')
+    # ADD ISSUE IN GITHUB
+    feedback = githubc.create_issue(feedback)
+    return feedback
