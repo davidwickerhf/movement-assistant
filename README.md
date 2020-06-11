@@ -47,7 +47,12 @@ After you fork and clone the development repository, you need to follow the step
     "CALENDAR_ID": "insert_here",
     "GDRIVE_EMAIL": "insert_here",
     "SPREADSHEET": "insert_here_if_available",
-    "TRELLO_BOARD_ID": "insert_here_if_available"
+    "TRELLO_BOARD_ID": "insert_here_if_available",
+    "GIT_USER": "insert_here",
+    "GIT_TOKEN": "insert_here",
+    "GIT_NAME": "insert_here",
+    "GIT_REPO": "insert_here",
+    "DEVS": []
 
 }
 ```
@@ -62,6 +67,11 @@ After you fork and clone the development repository, you need to follow the step
 - TELEGRAM PHONE NUMBER
 - GCALENDAR ID (this is either id of the calendar, which is found in the "Integrate Calendar" section of the settings of the calendar you want to access)
 - G DRIVE EMAIL (The email you want the database to be shared with)
+- GIT_USER -> GitHub username of the developer to assign feedbacks issues to
+- GIT_TOKEN -> Access token of the account used to create feedback issues into the repository
+- GIT_NAME -> Name of the account (or organisation) who owns the repository
+- GIT_REPO -> Name of the repository
+- DEVS -> List of Telegram user ids of the developers of the program
 - SPREADSHEET (the Id of the database spreadsheet. This field should be left empty: "", if you don't have a correctly formatted database sheet yet)
 - TRELLO_BOARD_ID (This field should be left empty: "", if you don't have a correctly formatted Trello Board yet))
 ### 6 - Setup virtual enviroment
