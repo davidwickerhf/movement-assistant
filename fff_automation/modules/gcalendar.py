@@ -9,6 +9,21 @@ from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 from google.auth.transport.requests import Request
 
+LAVENDER, SAGE, GRAPE, FLAMINGO, BANANA, TANGERINE, PEACOCK, GRAPHITE, BLUEBERRY, BASIL = range(
+    10)
+colors = {
+    1: 'Lavender',
+    2: 'Sage',
+    3: 'Grape',
+    4: 'Flamingo',
+    5: 'Banana',
+    6: 'Tangerine',
+    7: 'Peacock',
+    8: 'Graphite',
+    9: 'Blueberry',
+    10: 'Basil'
+}
+
 if not (os.path.isfile('fff_automation/secrets/calendar_token.pkl') and os.path.getsize('fff_automation/secrets/calendar_token.pkl') > 0):
     scope = ['https://www.googleapis.com/auth/calendar']
     # CREDENTIALS HAVE NOT BEEN INITIALIZED BEFORE

@@ -4,6 +4,7 @@ from fff_automation.modules import utils, settings
 from fff_automation.classes.call import Call
 from fff_automation.classes.group import Group
 from fff_automation.classes.user import User
+import ast
 
 
 def get_group_title(group_id):
@@ -48,8 +49,8 @@ def commit_group(obj):
             onboarding,
             date,
             status,
-            user_id
-            ) VALUES (:id, :card_id, :title, :category, :restriction, :region, :platform, :color, :is_subgroup, :parent_group, :purpose, :onboarding, :date, :status, :user_id)''',
+            activator_id
+            ) VALUES (:id, :card_id, :title, :category, :restriction, :region, :platform, :color, :is_subgroup, :parent_group, :purpose, :onboarding, :date, :status, :activator_id)''',
                   {'id': obj.id,
                    'card_id': obj.card_id,
                    'title': obj.title,
@@ -58,13 +59,13 @@ def commit_group(obj):
                    'region': obj.region,
                    'platform': obj.platform,
                    'color': obj.color,
-                   'is_subgroup': obj.is_subgroup,
+                   'is_subgroup': str(obj.is_subgroup),
                    'parent_group': obj.parentgroup,
                    'purpose': obj.purpose,
                    'onboarding': obj.onboarding,
                    'date': obj.date,
                    'status': obj.status,
-                   'user_id': obj.user_id})
+                   'activator_id': obj.activator_id})
     conn.commit()
     conn.close()
 
@@ -148,13 +149,13 @@ def get(item_id='', table='groups', field='id'):
                 region=result[5],
                 platform=result[6],
                 color=result[7],
-                is_subgroup=result[8],
+                is_subgroup=ast.literal_eval(result[8]),
                 parentgroup=result[9],
                 purpose=result[10],
                 onboarding=result[11],
                 date=result[12],
                 status=result[13],
-                user_id=result[14]
+                activator_id=result[14]
             )
             items.append(obj)
         elif table == 'calls':

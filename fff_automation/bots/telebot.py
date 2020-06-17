@@ -28,26 +28,16 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger("telegram.bot")
 
-# GLOBAL VARIABLES - CALL CONVERSATION
-CALL_DETAILS, EDIT_CALL, EDIT_ARGUMENT, ADD_TITLE, ADD_DATE, ADD_TIME = range(
-    6)
-
-# GLOBAL VARIABLES - GROUP CONVERSATION
-GROUP_INFO, EDIT_GROUP, CATEGORY, REGION, RESTRICTION, IS_SUBGROUP, PARENT_GROUP, PURPOSE, MANDATE, ONBOARDING = range(
-    10)
-
-# GLOBAL VARIABLES - DELETE GROUP CONVERSATION
-CANCEL_DELETE_GROUP, CONFIRM_DELETE_GROUP, DOUBLE_CONFIRM_DELETE_GROUP = range(
-    3)
+# GLOBAL VARIABLES - CONVERSATION
+CALL_DETAILS, EDIT_CALL, EDIT_ARGUMENT, ADD_TITLE, ADD_DATE, ADD_TIME, GROUP_INFO, EDIT_GROUP, ARGUMENT, INPUT_ARGUMENT, EDIT_IS_SUBGROUP, EDIT_PARENT, CATEGORY, REGION, RESTRICTION, IS_SUBGROUP, PARENT_GROUP, PURPOSE, ONBOARDING, COLOR, CANCEL_DELETE_GROUP, CONFIRM_DELETE_GROUP, DOUBLE_CONFIRM_DELETE_GROUP, FEEDBACK_TYPE, ISSUE_TYPE, INPUT_FEEDBACK = range(
+    26)
 TIMEOUT = -2
 
-# GLOBAL VARIABLES - FEEDBACK CONVERSATION
-FEEDBACK_TYPE, ISSUE_TYPE, INPUT_FEEDBACK = range(3)
 
 # GROUP CONVERSATION MESSAGES TEXT
 save_group_message = "<b>TRANSPARENCY BOT</b> \nThank you for adding me to this chat! I am the FFF Transparency Bot and I'm managed by the [WG] Transparency! \nI can help your group by keeping track of planned calls.\nPlease follow this wizard to complete saving this group's informations in the database:\n\n<b>Select a Category for this group:</b>"
 save_group_alreadyregistered_message = "<b>TRANSPARENCY BOT</b>\nThis group has already been registered once, no need to do it again\nType /help tp get a list of available commands"
-new_group_description = "- /newgroup -> This command is run automatically once the bot is added to a groupchat. It will get some information about the group (such as group Title and admins) and save it onto the FFF Database.\n<code>/newgroup</code>"
+new_group_description = "- /activate -> This command is run automatically once the bot is added to a groupchat. It will get some information about the group (such as group Title and admins) and save it onto the FFF Database.\n<code>/newgroup</code>"
 new_call_description = "- /newcall -> Schedule a call in the FFF Database as well as in the Transparency Calendar and Trello Board. \nArguments: <b>Title, Date, Time (GMT), Duration (optional), Description (optional), Agenda Link (optional):</b> \n<code>/newcall Group Call, Wednesday 15th March, 15:00, 00:45, Checkup Call, Link</code>"
 help_description = "<b>BOT INFORMATION</b>\nThe FFF Transparency Bot can respond to the following commands:\n - /help -> Get a list of all available commands\n{}\n\n<b>The following commands are automatically run by the bot:</b>\n{}"
 new_call_onlygroups_message = "This bot command  only works in groupchats! \nIn order for this command to work, please add me to the group you are trying to schedule the call for. \nKindest regards, \nFFF Transparency Bot"
@@ -66,6 +56,20 @@ send_feedback_input = "Reply to this message with the feedback you want to send:
 select_issue_type = "Select below the command you are having an <b>issue</b> with. If you are trying to report another issue, select 'Other'"
 send_issue_input = "Reply to this message describing the issye you have encountered in order to send your feedback:"
 cancel_feedback_text = "<b>FEEDBACK INPUT CANCELLED</b>\nNo feedback has been sent"
+
+# EDIT GROUP CONVERSATION TEXT
+no_permission_edit_group = '<b>This group has not been activated yet</b> Before editing this group\'s info, please activate it using /activate'
+edit_category_text = 'Select below the new <b>category</b> for this group:'
+edit_restriction_text = 'Select below the new <b>restriction</b> for this group:'
+edit_region_text = 'Select below the correct <b>region</b> this group concerns:'
+edit_color_text = 'Select below a new <b>color</b> for this group:'
+edit_purpose_text = 'Reply to this message with the updated <b>purpose</b> of this group:'
+edit_onboarding_text = 'Reply to this message with the updated <b>onboarding</b> procedure for this group:'
+edit_is_subgroup_text = 'Select below weather this group is a sub-group of another group or not'
+edit_parent_text = 'Select below the new <b>parent group</b> for this group'
+no_parents_edit_parent = 'Cannot add a parent group to this group as no other group has been activated yet.'
+edited_group_text = 'This group\'s information has been updated:'
+cancel_edit_group_text = '<b>GROUP EDIT CANCELLED</b>\nThe group hasn\'t been edited'
 
 
 def send_typing_action(func):
@@ -86,7 +90,6 @@ def help(update, context):
 
 
 ######################## GROUP CONVERSATION FUNCTIONS #######################
-
 def new_group(update, context):
     for user in update.message.new_chat_members:
         if user.username == "WGtransparencybot":
@@ -117,6 +120,7 @@ def save_group(update, context):
             title=title,
             users=users,
             platform="Telegram",
+            activator_id=user_id,
             user_id=user_id,
             message=update.message
         )
@@ -160,7 +164,7 @@ def category(update, context):
 
     # LOAD PERSISTENCE FILE
     group = utils.load_pkl('newgroup', chat_id, user_id)
-    if user_id != group.user_id:
+    if user_id != group.activator_id:
         return CATEGORY
     else:
         group.category = query.data
@@ -198,7 +202,7 @@ def region(update, context):
 
     # LOAD PERSISTENCE FILE
     group = utils.load_pkl('newgroup', chat_id, user_id)
-    if user_id != group.user_id:
+    if user_id != group.activator_id:
         return REGION
     else:
         group.region = utils.getKeysByValue(
@@ -232,7 +236,7 @@ def restriction(update, context):
 
     # LOAD PERSISTENCE FILE
     group = utils.load_pkl('newgroup', chat_id, user_id)
-    if user_id != group.user_id:
+    if user_id != group.activator_id:
         return RESTRICTION
     else:
         group.restriction = utils.getKeysByValue(
@@ -240,7 +244,7 @@ def restriction(update, context):
 
     # SET NEW TEXT AND MARKAP FOR IS SUBGOUP REQUEST
     text = "Awesome. Is this chat a sub-group of any working/discussion group in fridays for future? Answer by clicking the buttons below:"
-    markup = create_menu(["No", "Yes"], [0, 1])
+    markup = create_menu(["No", "Yes"], [0, 1], cols=2)
     query.edit_message_text(text, parse_mode=ParseMode.HTML)
     query.edit_message_reply_markup(markup)
     group.message = query.message
@@ -262,7 +266,7 @@ def is_subgroup(update, context):
 
     # LOAD PERSISTENCE FILE
     group = utils.load_pkl('newgroup', chat_id, user_id)
-    if user_id != group.user_id:
+    if user_id != group.activator_id:
         return IS_SUBGROUP
 
     print("BOT - IS SUBGROUP: Query:", query.data, " type: ", type(query.data))
@@ -318,7 +322,7 @@ def parent_group(update, context):
 
     # LOAD PERSISTENCE FILE
     group = utils.load_pkl('newgroup', chat_id, user_id)
-    if user_id != group.user_id:
+    if user_id != group.activator_id:
         return PARENT_GROUP
 
     if query.data in (0, 1):
@@ -359,7 +363,7 @@ def purpose(update, context):
         return PURPOSE
     # LOAD PERSISTENCE FILE
     group = utils.load_pkl('newgroup', chat_id, user_id)
-    if user_id != group.user_id:
+    if user_id != group.activator_id:
         return PURPOSE
 
     try:
@@ -403,7 +407,9 @@ def onboarding(update, context):
 
     # LOAD PERSISTENCE FILE
     group = utils.load_pkl('newgroup', chat_id, user_id)
-    if user_id != group.user_id:
+    print('TELEBOT: onboarding(): Is Subgroup: ',
+          group.is_subgroup, ' ', type(group.is_subgroup))
+    if user_id != group.activator_id:
         return REGION
 
     try:
@@ -454,7 +460,7 @@ def save_group_info(chat, group):
     # GROUP SAVING: Chat id, Title, Admins, Category, Region, Restrictions, is_subgroup,  parentgroup, purpose, onboarding
     print("SAVE GROUP INFO -----------------------------")
     group.date = datetime.utcnow()
-    group.name = chat.get_member(group.user_id).user.name
+    group.name = chat.get_member(group.activator_id).user.name
     card_url = interface.save_group(group)
     if card_url == -1:
         chat.send_message(
@@ -462,16 +468,26 @@ def save_group_info(chat, group):
         return ConversationHandler.END
 
     keyboard = [[InlineKeyboardButton("Trello Card", url=str(
-        card_url)), InlineKeyboardButton("Edit Info", callback_data="EDIT_GROUP")]]
+        card_url)), InlineKeyboardButton("Edit Info", callback_data='edit_group')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     print("BOT - Save Group Info: Made Kayboard")
 
-    text = "<b>{}</b> has been saved in the database!".format(group.title)
-    utils.delete_pkl('newgroup', group.id, group.user_id)
-
+    info_text = format_group_info(group)
+    utils.delete_pkl('newgroup', group.id, group.activator_id)
     chat.send_message(
-        text=text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+        text=info_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     print("BOT - Save Group Info: Sent Reply")
+
+
+def format_group_info(group):
+    print('TELEBOT: format_group_info()')
+    text = '''<b>{}</b> has been saved in the database!\n<b>Category:</b> {}\n<b>Restriction:</b> {}\n<b>Region:</b> {}\n<b>Color:</b> {}\n<b>Purpose:</b> {}\n<b>Onboarding:</b> {}'''.format(
+        group.title, group.category, group.restriction, group.region, group.get_color(), group.purpose, group.onboarding)
+    if group.is_subgroup:
+        text = text + \
+            '\n<b>Parent Group:</b> {}'.format(
+                database.get_group_title(group.parentgroup))
+    return text
 
 
 ####################### DELETE GROUP FUNCTIONS ##############################
@@ -501,6 +517,7 @@ def delete_group(update, context):
 
         # ADD GROUP TO PERSISTANCE
         group = database.get(chat_id)[0]
+        group.user_id = user.id
         utils.dump_pkl('deletegroup', group)
         return CONFIRM_DELETE_GROUP
     else:
@@ -582,6 +599,299 @@ def double_confirm_delete_group(update, context):
             return ConversationHandler.END
 
 
+####################### EDIT GROUP FUNCTIONS #################################
+def edit_group(update, context):
+    print('TELEBOT: edit_group()')
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    group = database.get(chat_id)[0]
+
+    if group == None:
+        update.effective_chat.send_message(
+            no_permission_edit_group, parse_mode=ParseMode.HTML)
+
+    group.user_id = user_id
+
+    # Send Argument Menu
+    markup = create_menu([
+        'Category',
+        'Restriction',
+        'Region',
+        'Color',
+        'Purpose',
+        'Onboarding',
+        'Parent Group',
+        'Cancel'
+    ], [
+        CATEGORY,
+        RESTRICTION,
+        REGION,
+        COLOR,
+        PURPOSE,
+        ONBOARDING,
+        PARENT_GROUP,
+        'cancel_edit_group'
+    ])
+
+    if update.callback_query:
+        update.callback_query.edit_message_text(
+            'Select below what you wish to edit:', reply_markup=markup)
+        group.message = update.callback_query.message
+    else:
+        group.message = update.message.reply_text(
+            'Select below what you wish to edit:', reply_markup=markup)
+
+    utils.dump_pkl('edit_group', group)
+    return ARGUMENT
+
+
+def edit_group_argument(update, context):
+    print('TELEBOT: edit_group_argument()')
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    query = update.callback_query
+
+    # CANCEL is pressed
+    if query.data == 'cancel_edit_group':
+        cancel_edit_group(update, context)
+        return ConversationHandler.END
+
+    # RETRIEVE GROUP INFO
+    group = utils.load_pkl('edit_group', chat_id, user_id)
+    if group == '' or user_id != group.user_id:
+        return ARGUMENT
+    group.edit_argument = int(query.data)
+
+    # HANDLE INPUT MARKUP
+    markup = None
+    if group.edit_argument == CATEGORY:
+        print('TELEBOT: edit_group_argument(): Create Category Markup')
+        markup = create_menu(
+            [interface.trelloc.WORKING_GROUP, interface.trelloc.DISCUSSION_GROUP, interface.trelloc.PROJECT, 'Cancel'], [
+                interface.trelloc.WORKING_GROUP, interface.trelloc.DISCUSSION_GROUP, interface.trelloc.PROJECT, 'cancel_edit_group'])
+        text = edit_category_text
+    elif group.edit_argument == RESTRICTION:
+        print('TELEBOT: edit_group_argument(): Create Restriction Markup')
+        markup = create_menu(["Open", "Restricted", "Closed", 'Cancel'],
+                             [interface.trelloc.restrictions['Open'],
+                              interface.trelloc.restrictions['Restricted'],
+                              interface.trelloc.restrictions['Closed']])
+        text = edit_restriction_text
+    elif group.edit_argument == REGION:
+        print('TELEBOT: edit_group_argument(): Create Region Markup')
+        markup = create_menu(["Africa", "Asia", "North America", "South America", "Oceania", "Europe", "Global", 'Cancel'], [
+            interface.trelloc.regions['Africa'],
+            interface.trelloc.regions['Asia'],
+            interface.trelloc.regions['North America'],
+            interface.trelloc.regions['South America'],
+            interface.trelloc.regions['Oceania'],
+            interface.trelloc.regions['Europe'],
+            interface.trelloc.regions['Global'],
+            'cancel_edit_group'], 2)
+        text = edit_region_text
+    elif group.edit_argument == COLOR:
+        print('TELEBOT: edit_group_argument(): Create Color Markup')
+        markup = create_menu([
+            interface.gcalendar.colors.get(1),
+            interface.gcalendar.colors.get(2),
+            interface.gcalendar.colors.get(3),
+            interface.gcalendar.colors.get(4),
+            interface.gcalendar.colors.get(5),
+            interface.gcalendar.colors.get(6),
+            interface.gcalendar.colors.get(7),
+            interface.gcalendar.colors.get(8),
+            interface.gcalendar.colors.get(9),
+            interface.gcalendar.colors.get(10),
+            'Cancel'
+        ], [
+            interface.gcalendar.LAVENDER,
+            interface.gcalendar.SAGE,
+            interface.gcalendar.GRAPE,
+            interface.gcalendar.FLAMINGO,
+            interface.gcalendar.BANANA,
+            interface.gcalendar.TANGERINE,
+            interface.gcalendar.PEACOCK,
+            interface.gcalendar.GRAPHITE,
+            interface.gcalendar.BLUEBERRY,
+            interface.gcalendar.BASIL,
+            'cancel_edit_group'
+
+        ], cols=2)
+        text = edit_color_text
+    elif group.edit_argument == PURPOSE:
+        print('TELEBOT: edit_group_argument(): Create Purpose Markup')
+        markup = create_menu(['Cancel'], ['cancel_edit_group'])
+        text = edit_purpose_text
+    elif group.edit_argument == ONBOARDING:
+        print('TELEBOT: edit_group_argument(): Create Onboarding Markup')
+        text = edit_onboarding_text
+        markup = create_menu(['Cancel'], ['cancel_edit_group'])
+    elif group.edit_argument == PARENT_GROUP:
+        print('TELEBOT: edit_group_argument(): Create Parent Markup')
+        markup = create_menu(['Yes', 'No', 'Cancel'], [
+                             0, 1, 'cancel_edit_group'], cols=2)
+        query.edit_message_text(edit_is_subgroup_text,
+                                parse_mode=ParseMode.HTML, reply_markup=markup)
+        group.message = query.message
+        utils.dump_pkl('edit_group', group)
+        return EDIT_IS_SUBGROUP
+
+    query.edit_message_text(text, parse_mode=ParseMode.HTML)
+    try:
+        query.edit_message_reply_markup(markup)
+    except:
+        print('TELEBOT: No Markup')
+    group.message = query.message
+    utils.dump_pkl('edit_group', group)
+    return INPUT_ARGUMENT
+
+
+def edit_is_subgroup(update, context):
+    print('TELEBOT: edit_is_subgroup()')
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    group = utils.load_pkl('edit_group', chat_id, user_id)
+
+    if group == '' or group.user_id != user_id:
+        return EDIT_IS_SUBGROUP
+
+    query = update.callback_query
+    if query.data == 'cancel_edit_group':
+        cancel_edit_group(update, context)
+        return ConversationHandler.END
+    elif int(query.data) == 0:
+        groups = database.get()
+        print(
+            'TELEBOT: edit_is_subgroup(): Group has parent | Database list: ', len(groups))
+        if len(groups) <= 1:
+            # No Parents available, error message, cancel edit operation
+            query.edit_message_text(no_parents_edit_parent)
+            utils.delete_pkl('edit_group', chat_id, user_id)
+            return ConversationHandler.END
+
+        # Ask for new parent
+        group.is_subgroup = True
+        markup = subgroup_menu(group, 1)
+        query.edit_message_text(edit_parent_text)
+        query.edit_message_reply_markup(markup)
+        group.message = query.message
+        utils.dump_pkl('edit_group', group)
+        return EDIT_PARENT
+    elif int(query.data) == 1:
+        print('TELEBOT: edit_is_subgroup(): Group does not have parent')
+        query.is_subgroup = False
+        # Save group into database and delete persistence file
+        group = interface.edit_group(group)
+        utils.delete_pkl('edit_group', chat_id, user_id)
+
+        # Send confirmation message
+        # Markup
+        markup = InlineKeyboardMarkup([[InlineKeyboardButton(
+            'Trello Card', url=group.card_url), InlineKeyboardButton('Edit Info', callback_data='edit_group')]])
+        group.message.delete()
+        update.effective_chat.send_message(
+            edited_group_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+        # End Conversation
+        return ConversationHandler.END
+
+
+def edit_parent(update, context):
+    print('TELEBOT: edit_parent()')
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    group = utils.load_pkl('edit_group', chat_id, user_id)
+
+    if group == '' or group.user_id != user_id:
+        return EDIT_PARENT
+
+    query = update.callback_query
+    group.parentgroup = query.data
+    # Save group into database and delete persistence file
+    group = interface.edit_group(group)
+    utils.delete_pkl('edit_group', chat_id, user_id)
+
+    # Send confirmation message
+    # Markup
+    markup = InlineKeyboardMarkup([[InlineKeyboardButton(
+        'Trello Card', url=group.card_url), InlineKeyboardButton('Edit Info', callback_data='edit_group')]])
+    group.message.delete()
+    update.effective_chat.send_message(
+        edited_group_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+    # End Conversation
+    return ConversationHandler.END
+
+
+def input_edit_group_argument(update, context):
+    print('TELEBOT: input_edit_group_argument()')
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    group = utils.load('edit_group', chat_id, user_id)
+
+    if group == '' or group.user_id != user_id:
+        return INPUT_ARGUMENT
+
+    query = update.callback_query
+    try:
+        if query.data == 'cancel_edit_group':
+            cancel_edit_group(update, context)
+    except:
+        print('TELEBOT: Not Cancel')
+
+    if group.edit_argument == CATEGORY:
+        print('TELEBOT: input_edit_group_argument(): Category')
+        group.category = query.data
+    elif group.edit_argument == RESTRICTION:
+        print('TELEBOT: input_edit_group_argument(): Restriction')
+        group.restriction = utils.getKeysByValue(
+            interface.trelloc.restrictions, query.data)[0]
+    elif group.edit_argument == REGION:
+        print('TELEBOT: input_edit_group_argument(): Region')
+        group.region = utils.getKeysByValue(
+            interface.trelloc.regions, query.data)[0]
+    elif group.edit_argument == COLOR:
+        print('TELEBOT: input_edit_group_argument(): Color')
+        group.color = query.data
+    elif group.edit_argument == PURPOSE:
+        print('TELEBOT: input_edit_group_argument(): Purpose')
+        group.purpose = update.message.text
+    elif group.edit_argument == ONBOARDING:
+        print('TELEBOT: input_edit_group_argument(): Onboarding')
+        group.onboarding = update.message.text
+    elif group.edit_argument == PARENT_GROUP:
+        print('TELEBOT: input_edit_group_argument(): Parent group')
+        group.parentgroup = query.data
+
+    # Save group into database and delete persistence file
+    group = interface.edit_group(group)
+    utils.delete_pkl('edit_group', chat_id, user_id)
+
+    # Send confirmation message
+    # Markup
+    markup = InlineKeyboardMarkup([[InlineKeyboardButton(
+        'Trello Card', url=group.card_url), InlineKeyboardButton('Edit Info', callback_data='edit_group')]])
+    group.message.delete()
+    update.effective_chat.send_message(
+        edited_group_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+    # End Conversation
+    return ConversationHandler.END
+
+
+@run_async
+@send_typing_action
+def cancel_edit_group(update, context):
+    # GET CALL SAVED IN PERSISTANCE FILE
+    chat_id = update.effective_chat.id
+    user_id = update.callback_query.from_user.id
+    feedback = utils.load_pkl('edit_group', chat_id, user_id)
+    update.callback_query.answer()
+    if feedback == "" or user_id != feedback.user_id:
+        return
+    else:
+        print("CANCEL PRESSED")
+        feedback.message.edit_text(
+            text=cancel_edit_group_text, parse_mode=ParseMode.HTML)
+        utils.delete_pkl('edit_group', chat_id, user_id)
+    return ConversationHandler.END
 ####################### CALL CONVERSATION FUNCTIONS #########################
 @run_async
 @send_typing_action
@@ -653,10 +963,6 @@ def call_details(update, context):
 
 def edit_call(update, context):
     print("EDIT CALL")
-
-
-def edit_argument(update, context):
-    print("EDIT ARGUMENT")
 
 
 @run_async
@@ -1191,11 +1497,9 @@ def setup(token):
     # Commands
     dp.add_handler(CommandHandler("help", help))
     group_handler = ConversationHandler(
-        entry_points=[MessageHandler(
-            Filters.status_update.new_chat_members, new_group), CommandHandler("newgroup", save_group)],
+        entry_points=[CommandHandler("activate", save_group)],
         states={
             GROUP_INFO: [],
-            EDIT_GROUP: [],
             CATEGORY: [CallbackQueryHandler(category)],
             REGION: [CallbackQueryHandler(region)],
             RESTRICTION: [CallbackQueryHandler(restriction)],
@@ -1204,6 +1508,29 @@ def setup(token):
             PURPOSE: [MessageHandler(Filters.text, purpose), CallbackQueryHandler(purpose)],
             ONBOARDING: [MessageHandler(Filters.text, onboarding), CallbackQueryHandler(onboarding)],
             TIMEOUT: [MessageHandler(Filters.all, callback=conv_timeout)],
+        },
+        fallbacks=[],
+        conversation_timeout=timedelta(seconds=240),
+    )
+    edit_group_handler = ConversationHandler(
+        entry_points=[CallbackQueryHandler(
+            edit_group, pattern='^' + 'edit_group' + '$'), CommandHandler('editgroup', edit_group)],
+        states={
+            ARGUMENT: [CallbackQueryHandler(edit_group_argument)],
+            EDIT_IS_SUBGROUP: [CallbackQueryHandler(edit_is_subgroup)],
+            EDIT_PARENT: [CallbackQueryHandler(edit_parent)],
+            INPUT_ARGUMENT: [CallbackQueryHandler(input_edit_group_argument), MessageHandler(Filters.text, input_edit_group_argument)],
+        },
+        fallbacks=[CallbackQueryHandler(
+            cancel_feedback, pattern='cancel_feedback')]
+    )
+    delete_group_handler = ConversationHandler(
+        entry_points=[CommandHandler('deletegroup', delete_group)],
+        states={
+            CONFIRM_DELETE_GROUP: [CallbackQueryHandler(confirm_delete_group)],
+            DOUBLE_CONFIRM_DELETE_GROUP: [
+                CallbackQueryHandler(double_confirm_delete_group)],
+            TIMEOUT: [MessageHandler(Filters.all, callback=conv_timeout)]
         },
         fallbacks=[],
         conversation_timeout=timedelta(seconds=240),
@@ -1223,17 +1550,6 @@ def setup(token):
         fallbacks=[CallbackQueryHandler(cancel_call)],
         conversation_timeout=timedelta(seconds=240),
     )
-    delete_group_handler = ConversationHandler(
-        entry_points=[CommandHandler('deletegroup', delete_group)],
-        states={
-            CONFIRM_DELETE_GROUP: [CallbackQueryHandler(confirm_delete_group)],
-            DOUBLE_CONFIRM_DELETE_GROUP: [
-                CallbackQueryHandler(double_confirm_delete_group)],
-            TIMEOUT: [MessageHandler(Filters.all, callback=conv_timeout)]
-        },
-        fallbacks=[],
-        conversation_timeout=timedelta(seconds=240),
-    )
     feedback_handler = ConversationHandler(
         entry_points=[CommandHandler('feedback', feedback)],
         states={
@@ -1244,9 +1560,11 @@ def setup(token):
         fallbacks=[CallbackQueryHandler(
             cancel_feedback, pattern='cancel_feedback')],
     )
-    dp.add_handler(call_handler)
+
     dp.add_handler(group_handler)
+    dp.add_handler(edit_group_handler)
     dp.add_handler(delete_group_handler)
+    dp.add_handler(call_handler)
     dp.add_handler(feedback_handler)
     dp.add_error_handler(error)
 

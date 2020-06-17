@@ -53,8 +53,11 @@ def log(timestamp, user_id, action, group_name, item=''):
     logs.append_row([timestamp, user_id, action, group_name, item])
 
 
-def save_group(group, parent_title):
+def save_group(group):
     # SAVE GROUP IN DATABASE
+    parent_title = ''
+    if group.is_subgroup:
+        parent_title = database.get(group.parentgroup)[0].title
     print("DATABASE: Saved group")
     groupchats.append_row([group.id, group.title, group.category, group.region, group.restriction,
                            group.admin_string, group.platform, parent_title, group.purpose, group.onboarding, str(group.date), group.name])
@@ -62,14 +65,18 @@ def save_group(group, parent_title):
     log(str(group.date), group.user_id, 'ACTIVATE GROUP', group.title)
 
 
-def update_group(chat_id, title, admins, category="", level="",
-                 platform="", purpose="", mandate="", onboarding="", link=""):
-    try:
-        row = find_row_by_id(chat_id)[0]
-    except:
-        save_group(chat_id, title, category, level,
-                   admins, platform, purpose, mandate, onboarding, link)
-    # function is not complete
+def edit_group(group):
+    old_row = find_row_by_id(item_id=group.id)[0]
+    groupchats.delete_row(old_row)
+    parent_title = ''
+    parent = database.get(
+        group.parentgroup, field='parent_group')[0]
+    if parent != None:
+        parent_title = parent.title
+    groupchats.append_row([group.id, group.title, group.category, group.region, group.restriction,
+                           group.admin_string, group.platform, parent_title, group.purpose, group.onboarding, str(group.date), group.name])
+    # LOG
+    log(str(group.date), group.user_id, 'EDIT_GROUP', group.title)
 
 
 def archive_group(chat_id, username):

@@ -228,7 +228,7 @@ def set_database(users=None, groups=None, calls=None):
             onboarding text,
             date text NOT NULL,
             status integer NOT NULL,
-            user_id integer NOT NULL
+            activator_id integer NOT NULL
             )""")
     if not calls:
         c.execute("""CREATE TABLE calls (

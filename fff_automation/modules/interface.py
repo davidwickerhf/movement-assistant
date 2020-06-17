@@ -42,47 +42,50 @@ def save_group(group):
 
     admins_string = admins_string[:-2]
     group.admins_string = admins_string
-    print("DATABASE: Got Admins")
+    print("INTERFACE: Got Admins")
 
     # GET RANDOM CALENDAR COLOR:
     color_id = utils.get_random_event_color()
-    print("DATABASE: Got Group Color")
+    print("INTERFACE: Got Group Color")
 
     # CREATE TRELLO CARD
-    if group.is_subgroup:
+    if group.is_subgroup == True:
         parent_card = database.get_group_card(group.parentgroup)
-        print("DATABASE: Got parent card ", parent_card)
+        print("INTERFACE: Got parent card ", parent_card)
     else:
         parent_card = ""
-        print("DATABASE: No parent")
+        print("INTERFACE: No parent")
     card_info = trelloc.add_group(group)
     card_id = card_info[0]
     card_url = card_info[1]
-    print("DATABASE: Got Trello Card Info")
+    print("INTERFACE: Got Trello Card Info")
 
     # SAVE GROUP IN DATABASE
     # Save Variables in Group Obj
     group.card_id = card_id
     group.color = color_id
-    group.is_subgroup = str(group.is_subgroup)
     database.commit_group(group)
-    print("DATABASE: Saved group")
+    print("INTERFACE: Saved group")
 
     # SAVE IN KUMA BOARD
 
     # SHEET INTERFACE
-    sheet.save_group(group, database.get_group_title(group.parentgroup))
+    sheet.save_group(group)
     return card_url
 
 
-def update_group(chat_id, title, admins, category="", level="",
-                 platform="", purpose="", mandate="", onboarding="", link=""):
-    try:
-        row = database.get(chat_id)[0]
-    except:
-        save_group(chat_id, title, category, level,
-                   admins, platform, purpose, mandate, onboarding, link)
-    # function is not complete
+def edit_group(group):
+    print('INTERFACE: edit_group()')
+    # EDIT TRELLO CARD
+    group.children = database.get(group.id, field='parent_group')
+    trelloc.edit_group(group)
+
+    # EDIT SHEET
+    sheet.edit_group(group)
+
+    # UPDATE DATABASE
+    database.commit_group(group)
+    return group
 
 
 def archive_group(chat_id, user_id):

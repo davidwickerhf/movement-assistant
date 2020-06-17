@@ -32,6 +32,7 @@ class Group():
                  onboarding='',
                  date='',
                  status=0,
+                 activator_id='',
                  user_id='',
                  users='',
                  admin_string='',
@@ -40,8 +41,11 @@ class Group():
                  children='',
                  siblings='',
                  calls='',
+                 card_url='',
                  pgroup_last_index='',
+                 edit_argument=''
                  ):
+        # GROUP ESSENTIAL VARIABLES - SAVED IN DATABASE
         self.id = id
         self.card_id = card_id
         self.title = title
@@ -56,8 +60,9 @@ class Group():
         self.onboarding = onboarding
         self.date = date
         self.status = status
+        self.activator_id = activator_id
+        # CONVERSATION UTILS VARIABLES - DISCARDED
         self.user_id = user_id
-
         self.users = users
         self.admin_string = admin_string
         self.name = name
@@ -65,20 +70,22 @@ class Group():
         self.children = children
         self.siblings = siblings
         self.calls = calls
+        self.card_url = card_url
         self.pgroup_last_index = pgroup_last_index
+        self.edit_argument = edit_argument
 
-    def print_arguments(self):
-        print("GROUP: Chat Id", self.chat_id)
-        print("GROUP: Title", self.title)
-        print("GROUP: admins", self.admins)
-        print("GROUP: platform", self.platform)
-        print("GROUP: user Id", self.user_id)
-        print("GROUP: message", self.message)
-        print("GROUP: category", self.category)
-        print("GROUP: regiom", self.region)
-        print("GROUP: restriction", self.restriction)
-        print("GROUP: is_subgroup", self.is_subgroup)
-        print("GROUP: parentgroup", self.parentgroup)
-        print("GROUP: purpose", self.purpose)
-        print("GROUP: onboarding", self.onboarding)
-        print("GROUP: pgroup_last_index", self.pgroup_last_index)
+    def get_color(self):
+        colors = {
+            1: 'Lavender',
+            2: 'Sage',
+            3: 'Grape',
+            4: 'Flamingo',
+            5: 'Banana',
+            6: 'Tangerine',
+            7: 'Peacock',
+            8: 'Graphite',
+            9: 'Blueberry',
+            10: 'Basil'
+        }
+        color_str = colors.get(self.color)
+        return color_str
