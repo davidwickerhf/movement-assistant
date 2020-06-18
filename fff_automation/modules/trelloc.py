@@ -174,7 +174,7 @@ def edit_group(group):
     card = get_card(database.get_group_card(group.id))
 
     # UPDATE DESCRIPTION
-    description = "**INTERNATIONAL {}**\n **Purpose:**{}\n\n**Onboarding:** {}\n\n**Group Category:** {}\n**Group Region:** {}\n**Group Platform:** {}\n**Group Admins:** {}\n\n**Registered on:** {}".format(
+    description = "**INTERNATIONAL {}**\n **Purpose:** {}\n\n**Onboarding:** {}\n\n**Group Category:** {}\n**Group Region:** {}\n**Group Platform:** {}\n**Group Admins:** {}\n\n**Registered on:** {}".format(
         group.category.upper(), group.purpose, group.onboarding, group.category, group.region, group.platform, group.admin_string, group.date)
     # Add eventual Parent Info
     if group.is_subgroup:
@@ -197,48 +197,61 @@ def edit_group(group):
     database_group = database.get(group.id)[0]
     if group.parentgroup != database_group.parentgroup:
         print('TRELLOC: Parent has changed')
+        siblings = database.get(
+                database_group.parentgroup, field='parent_group')
+        for sibling in siblings:
+            if sibling.id == group.id:
+                siblings.remove(sibling)
         if group.is_subgroup:
             # Add attachment to new parent card description
-            parent_card = get_card(database.get(group.parentgroup))
-            siblings = database.get(
-                database_group.parentgroup, field='parent_group')
+            print('TRELLOC: New Parent Group Id: ', group.parentgroup)
+            parent_group = database.get(group.parentgroup)[0]
+            print('TRELLOC: New Parent Group: ', parent_group)
+            parent_card = get_card(parent_group.card_id)
+            
             parent_description = parent_card.description
             if len(siblings) < 1 or siblings[0] == None:
-                parent_description.append("\n**Subgroups:**")
-            parent_description.append("\n- {} -> https://trello.com/c/{}".format(
+                parent_description += ("\n**Subgroups:**")
+            parent_description += "\n- {} -> https://trello.com/c/{}".format(
                 group.title,
                 group.card_id
-            ))
+            )
             update_card(parent_card.id, desc=parent_description)
 
         if database_group.is_subgroup:
             # Remove attachment from old parent card description
-            parent_card = get_card(database.get(database_group.parentgroup))
+            parent_card = get_card(database.get(database_group.parentgroup)[0].card_id)
             parent_description = parent_card.description
             description = re.sub(
                 "- {} -> {}".format(card.name, card.short_url), '', parent_description)
+            if len(siblings) < 1 or siblings[0] == None:
+                description = description.replace('**Subgroups:**', '')
+                description = description.rstrip()
             update_card(parent_card.id, desc=description)
     elif group.title != database_group.title:
+        # Card title has changed - change parent
         parent_card = get_card(database.get(database_group.parentgroup))
         parent_description = parent_card.description
         description = re.sub(
             "- {} -> {}".format(database_group.title, card.short_url), '- {} -> {}'.format(card.name, card.short_url), parent_description)
         update_card(parent_card.id, desc=description)
-
-    # Update Column Position
-    if group.category == WORKING_GROUP:
-        card.change_list(settings.get_var(settings.TL_WG, 'lists'))
-    elif group.category == DISCUSSION_GROUP:
-        card.change_list(settings.get_var(settings.TL_DG, 'lists'))
-    elif group.category == PROJECT:
-        card.change_list(settings.get_var(settings.TL_IP, 'lists'))
-
-    # Update Labels
-    labels = card.labels
-    for label in labels:
-        card.remove_labeL(label.id)
-    card.add_label(client.get_label(regions[group.region], board_id))
-    card.add_label(client.get_label(restrictions[group.restriction], board_id))
+    
+    if group.edit_argument == settings.CATEGORY:
+        # Update Column Position
+        if group.category == WORKING_GROUP:
+            card.change_list(settings.get_var(settings.TL_WG, 'lists'))
+        elif group.category == DISCUSSION_GROUP:
+            card.change_list(settings.get_var(settings.TL_DG, 'lists'))
+        elif group.category == PROJECT:
+            card.change_list(settings.get_var(settings.TL_IP, 'lists'))
+    elif group.edit_argument in [settings.REGION, settings.RESTRICTION]:
+        # Update Labels
+        labels = card.labels
+        for label in labels:
+            card.remove_label(label)
+        card.add_label(client.get_label(regions[group.region], board_id))
+        card.add_label(client.get_label(restrictions[group.restriction], board_id))
+    group.card_url = 'https://trello.com/c/{}'.format(group.card_id)
 
 
 def delete_group(card_id, parentcard_id="", childrencards_id=[], siblings=[]):

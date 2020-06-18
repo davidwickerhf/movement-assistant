@@ -15,8 +15,10 @@ import traceback
 import json
 import logging
 import os
+import html
 import pickle
 from fff_automation.modules import settings, utils, database, interface
+from fff_automation.modules.settings import CALL_DETAILS, EDIT_CALL, EDIT_ARGUMENT, ADD_TITLE, ADD_DATE, ADD_TIME, GROUP_INFO, EDIT_GROUP, ARGUMENT, INPUT_ARGUMENT, EDIT_IS_SUBGROUP, EDIT_PARENT, CATEGORY, REGION, RESTRICTION, IS_SUBGROUP, PARENT_GROUP, PURPOSE, ONBOARDING, COLOR, CANCEL_DELETE_GROUP, CONFIRM_DELETE_GROUP, DOUBLE_CONFIRM_DELETE_GROUP, FEEDBACK_TYPE, ISSUE_TYPE, INPUT_FEEDBACK
 from fff_automation.modules import utils
 from fff_automation.modules import database
 from fff_automation.classes.group import Group
@@ -29,8 +31,6 @@ logging.basicConfig(
 logger = logging.getLogger("telegram.bot")
 
 # GLOBAL VARIABLES - CONVERSATION
-CALL_DETAILS, EDIT_CALL, EDIT_ARGUMENT, ADD_TITLE, ADD_DATE, ADD_TIME, GROUP_INFO, EDIT_GROUP, ARGUMENT, INPUT_ARGUMENT, EDIT_IS_SUBGROUP, EDIT_PARENT, CATEGORY, REGION, RESTRICTION, IS_SUBGROUP, PARENT_GROUP, PURPOSE, ONBOARDING, COLOR, CANCEL_DELETE_GROUP, CONFIRM_DELETE_GROUP, DOUBLE_CONFIRM_DELETE_GROUP, FEEDBACK_TYPE, ISSUE_TYPE, INPUT_FEEDBACK = range(
-    26)
 TIMEOUT = -2
 
 
@@ -68,6 +68,7 @@ edit_onboarding_text = 'Reply to this message with the updated <b>onboarding</b>
 edit_is_subgroup_text = 'Select below weather this group is a sub-group of another group or not'
 edit_parent_text = 'Select below the new <b>parent group</b> for this group'
 no_parents_edit_parent = 'Cannot add a parent group to this group as no other group has been activated yet.'
+editing_group_text = 'Editing group\'s information... This might take a while'
 edited_group_text = 'This group\'s information has been updated:'
 cancel_edit_group_text = '<b>GROUP EDIT CANCELLED</b>\nThe group hasn\'t been edited'
 
@@ -121,6 +122,7 @@ def save_group(update, context):
             users=users,
             platform="Telegram",
             activator_id=user_id,
+            activator_name=update.effective_user.name,
             user_id=user_id,
             message=update.message
         )
@@ -139,14 +141,6 @@ def save_group(update, context):
         chat.send_message(
             text=save_group_alreadyregistered_message, parse_mode=ParseMode.HTML)
         return ConversationHandler.END
-
-
-def group_info(update, context):
-    print("BOT: --- GROUP INFO ---")
-
-
-def edit_group(update, context):
-    print("BOT: --- EDIT GROUP INFO ---")
 
 
 @run_async
@@ -288,6 +282,7 @@ def is_subgroup(update, context):
         else:
             print("BOT: No groups available for parents")
             text = "Mmh... It seams no other group has been registerred yet... To add a parent to a group, make sure you register that group chat first!"
+            group.is_subgroup = False
             markup = create_menu(["Next"], [0])
             query.edit_message_text(text, parse_mode=ParseMode.HTML)
             query.edit_message_reply_markup(markup)
@@ -325,7 +320,17 @@ def parent_group(update, context):
     if user_id != group.activator_id:
         return PARENT_GROUP
 
-    if query.data in (0, 1):
+    if query.data == 'no_parent':
+        group.is_subgroup = False
+        # SET NEW TEXT AND MARKAP FOR PURPOSE REQUEST
+        text = "Alright, last two steps! Please reply to this message with a short description of the purpose and mandate of the group.\nYou can skip this step by clicking the button below."
+        markup = create_menu(["Skip"], ["skip"])
+        query.edit_message_text(text, parse_mode=ParseMode.HTML)
+        query.edit_message_reply_markup(markup)
+        group.message = query.message
+        utils.dump_pkl('newgroup', group)
+        return PURPOSE
+    elif query.data in (0, 1):
         markup = subgroup_menu(
             group=group, direction=query.data)
         query.edit_message_reply_markup(markup)
@@ -430,37 +435,10 @@ def onboarding(update, context):
         return ConversationHandler.END
 
 
-# GROUP UTILS ----------------------------------------
-def subgroup_menu(group, direction, size=4):
-    values = interface.rotate_groups(
-        first_index=group.pgroup_last_index, direction=direction, size=size)
-    print("TELEBOT: Rotated Groups: ", values)
-    rotated_groups = values[0]
-    print("Check 1 ", rotated_groups)
-    group.pgroup_last_index = values[1]
-    utils.dump_pkl('newgroup', group)
-    keyboard = []
-    for group in rotated_groups:
-        print("Check 2")
-        row = []
-        group_id = group.id
-        print("TELEBOT: subgroup_menu(): Group Id: ", group_id)
-        title = database.get_group_title(group_id)
-        button = InlineKeyboardButton(text=title, callback_data=group_id)
-        row.append(button)
-        keyboard.append(row)
-
-    keyboard.append([InlineKeyboardButton(text="<=", callback_data=0),
-                     InlineKeyboardButton(text="=>", callback_data=1)])
-    markup = InlineKeyboardMarkup(keyboard)
-    return markup
-
-
 def save_group_info(chat, group):
     # GROUP SAVING: Chat id, Title, Admins, Category, Region, Restrictions, is_subgroup,  parentgroup, purpose, onboarding
     print("SAVE GROUP INFO -----------------------------")
     group.date = datetime.utcnow()
-    group.name = chat.get_member(group.activator_id).user.name
     card_url = interface.save_group(group)
     if card_url == -1:
         chat.send_message(
@@ -477,17 +455,6 @@ def save_group_info(chat, group):
     chat.send_message(
         text=info_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     print("BOT - Save Group Info: Sent Reply")
-
-
-def format_group_info(group):
-    print('TELEBOT: format_group_info()')
-    text = '''<b>{}</b> has been saved in the database!\n<b>Category:</b> {}\n<b>Restriction:</b> {}\n<b>Region:</b> {}\n<b>Color:</b> {}\n<b>Purpose:</b> {}\n<b>Onboarding:</b> {}'''.format(
-        group.title, group.category, group.restriction, group.region, group.get_color(), group.purpose, group.onboarding)
-    if group.is_subgroup:
-        text = text + \
-            '\n<b>Parent Group:</b> {}'.format(
-                database.get_group_title(group.parentgroup))
-    return text
 
 
 ####################### DELETE GROUP FUNCTIONS ##############################
@@ -600,6 +567,7 @@ def double_confirm_delete_group(update, context):
 
 
 ####################### EDIT GROUP FUNCTIONS #################################
+@run_async
 def edit_group(update, context):
     print('TELEBOT: edit_group()')
     user_id = update.effective_user.id
@@ -609,6 +577,7 @@ def edit_group(update, context):
     if group == None:
         update.effective_chat.send_message(
             no_permission_edit_group, parse_mode=ParseMode.HTML)
+        return ConversationHandler.END
 
     group.user_id = user_id
 
@@ -631,7 +600,7 @@ def edit_group(update, context):
         ONBOARDING,
         PARENT_GROUP,
         'cancel_edit_group'
-    ])
+    ], 2)
 
     if update.callback_query:
         update.callback_query.edit_message_text(
@@ -645,6 +614,7 @@ def edit_group(update, context):
     return ARGUMENT
 
 
+@run_async
 def edit_group_argument(update, context):
     print('TELEBOT: edit_group_argument()')
     chat_id = update.effective_chat.id
@@ -746,6 +716,7 @@ def edit_group_argument(update, context):
     return INPUT_ARGUMENT
 
 
+@run_async
 def edit_is_subgroup(update, context):
     print('TELEBOT: edit_is_subgroup()')
     chat_id = update.effective_chat.id
@@ -769,9 +740,8 @@ def edit_is_subgroup(update, context):
             utils.delete_pkl('edit_group', chat_id, user_id)
             return ConversationHandler.END
 
-        # Ask for new parent
         group.is_subgroup = True
-        markup = subgroup_menu(group, 1)
+        markup = subgroup_menu(group, 1, type=EDIT_PARENT)
         query.edit_message_text(edit_parent_text)
         query.edit_message_reply_markup(markup)
         group.message = query.message
@@ -779,7 +749,8 @@ def edit_is_subgroup(update, context):
         return EDIT_PARENT
     elif int(query.data) == 1:
         print('TELEBOT: edit_is_subgroup(): Group does not have parent')
-        query.is_subgroup = False
+        group.is_subgroup = False
+        group.parentgroup = ''
         # Save group into database and delete persistence file
         group = interface.edit_group(group)
         utils.delete_pkl('edit_group', chat_id, user_id)
@@ -789,12 +760,14 @@ def edit_is_subgroup(update, context):
         markup = InlineKeyboardMarkup([[InlineKeyboardButton(
             'Trello Card', url=group.card_url), InlineKeyboardButton('Edit Info', callback_data='edit_group')]])
         group.message.delete()
+        text = format_group_info(group, type=1)
         update.effective_chat.send_message(
-            edited_group_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+            text, reply_markup=markup, parse_mode=ParseMode.HTML)
         # End Conversation
         return ConversationHandler.END
 
 
+@run_async
 def edit_parent(update, context):
     print('TELEBOT: edit_parent()')
     chat_id = update.effective_chat.id
@@ -805,6 +778,19 @@ def edit_parent(update, context):
         return EDIT_PARENT
 
     query = update.callback_query
+    if query.data == 'cancel':
+        # Cancel Edit Group
+        cancel_edit_group(update, context)
+        return ConversationHandler.END
+    elif query.data in (0, 1):
+        markup = subgroup_menu(
+            group=group, direction=query.data, type=EDIT_PARENT)
+        query.edit_message_reply_markup(markup)
+        group.message = query.message
+        utils.dump_pkl('edit_group', group)
+        return EDIT_PARENT
+
+
     group.parentgroup = query.data
     # Save group into database and delete persistence file
     group = interface.edit_group(group)
@@ -821,11 +807,13 @@ def edit_parent(update, context):
     return ConversationHandler.END
 
 
+@run_async
+@send_typing_action
 def input_edit_group_argument(update, context):
     print('TELEBOT: input_edit_group_argument()')
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    group = utils.load('edit_group', chat_id, user_id)
+    group = utils.load_pkl('edit_group', chat_id, user_id)
 
     if group == '' or group.user_id != user_id:
         return INPUT_ARGUMENT
@@ -836,6 +824,7 @@ def input_edit_group_argument(update, context):
             cancel_edit_group(update, context)
     except:
         print('TELEBOT: Not Cancel')
+    group.message.edit_text(editing_group_text)
 
     if group.edit_argument == CATEGORY:
         print('TELEBOT: input_edit_group_argument(): Category')
@@ -867,14 +856,16 @@ def input_edit_group_argument(update, context):
 
     # Send confirmation message
     # Markup
-    markup = InlineKeyboardMarkup([[InlineKeyboardButton(
-        'Trello Card', url=group.card_url), InlineKeyboardButton('Edit Info', callback_data='edit_group')]])
+    text = format_group_info(group, type=1)
+    print('TELEBOT: group card url: ', group.card_url)
+    keyboard = [[InlineKeyboardButton("Trello Card", url=str(
+        group.card_url)), InlineKeyboardButton("Edit Info", callback_data='edit_group')]]
+    markup = InlineKeyboardMarkup(keyboard)
     group.message.delete()
     update.effective_chat.send_message(
-        edited_group_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+        text, reply_markup=markup, parse_mode=ParseMode.HTML)
     # End Conversation
     return ConversationHandler.END
-
 
 @run_async
 @send_typing_action
@@ -882,16 +873,65 @@ def cancel_edit_group(update, context):
     # GET CALL SAVED IN PERSISTANCE FILE
     chat_id = update.effective_chat.id
     user_id = update.callback_query.from_user.id
-    feedback = utils.load_pkl('edit_group', chat_id, user_id)
+    group = utils.load_pkl('edit_group', chat_id, user_id)
     update.callback_query.answer()
-    if feedback == "" or user_id != feedback.user_id:
+    if group == "" or user_id != group.user_id:
         return
     else:
         print("CANCEL PRESSED")
-        feedback.message.edit_text(
+        group.message.edit_text(
             text=cancel_edit_group_text, parse_mode=ParseMode.HTML)
         utils.delete_pkl('edit_group', chat_id, user_id)
     return ConversationHandler.END
+
+
+####################### GROUP UTILS ----------------------------------------
+def subgroup_menu(group, direction, size=4, type=PARENT_GROUP):
+    values = interface.rotate_groups(
+        first_index=group.pgroup_last_index, direction=direction, size=size)
+    print("TELEBOT: Rotated Groups: ", values)
+    rotated_groups = values[0]
+    print("Check 1 ", rotated_groups)
+    group.pgroup_last_index = values[1]
+    utils.dump_pkl('newgroup', group)
+    keyboard = []
+    for pgroup in rotated_groups:
+        if pgroup.id != group.id:
+            row = []
+            group_id = pgroup.id
+            print("TELEBOT: subgroup_menu(): Group Id: ", group_id)
+            title = database.get_group_title(group_id)
+            button = InlineKeyboardButton(text=title, callback_data=group_id)
+            row.append(button)
+            keyboard.append(row)
+
+    if type == PARENT_GROUP:
+        keyboard.append([InlineKeyboardButton('No Parent Group', callback_data='no_parent')])
+
+    keyboard.append([InlineKeyboardButton(text="<=", callback_data=0),
+                     InlineKeyboardButton(text="=>", callback_data=1)])
+    
+    if type == EDIT_PARENT:
+        keyboard.append([InlineKeyboardButton('Cancel', callback_data='cancel')])
+    markup = InlineKeyboardMarkup(keyboard)
+    return markup
+
+
+def format_group_info(group, type=0):
+    print('TELEBOT: format_group_info()')
+    if type == 0:
+        text = '<b>{}</b> has been saved in the database!'.format(group.title)
+    elif type == 1:
+        text = edited_group_text
+    text = text +  '''\n<b>Category:</b> {}\n<b>Restriction:</b> {}\n<b>Region:</b> {}\n<b>Color:</b> {}\n<b>Purpose:</b> {}\n<b>Onboarding:</b> {}'''.format(
+        group.category, group.restriction, group.region, group.get_color(), group.purpose, group.onboarding)
+    if group.is_subgroup:
+        text = text + \
+            '\n<b>Parent Group:</b> {}'.format(
+                database.get_group_title(group.parentgroup))
+    return text
+
+    
 ####################### CALL CONVERSATION FUNCTIONS #########################
 @run_async
 @send_typing_action
@@ -1422,43 +1462,34 @@ def create_menu(button_titles, callbacks, cols=1):
 
 
 def error(update, context):
-    logger.warning('BOT: Update caused error: "%s"', context.error)
-    # add all the dev user_ids in this list. You can also add ids of channels or groups.
-    # MAKE THIS A ENV VARIABLE------------------------------------------------------------------------------------------
+    """Log the error and send a telegram message to notify the developer."""
+    # Log the error before we do anything else, so we can see it even if something breaks.
+    logger.error(msg="Exception while handling an update:", exc_info=context.error)
+
+    # traceback.format_exception returns the usual python message about an exception, but as a
+    # list of strings rather than a single string, so we have to join them together.
+    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
+    tb = ''.join(tb_list)
+
+    # Build the message with some markup and additional information about what happened.
+    # You might need to add some logic to deal with messages longer than the 4096 character limit.
+    message = (
+        'An exception was raised while handling an update\n'
+        '<pre>update = {}</pre>\n\n'
+        '<pre>context.chat_data = {}</pre>\n\n'
+        '<pre>context.user_data = {}</pre>\n\n'
+        '<pre>{}</pre>'
+    ).format(
+        html.escape(json.dumps(update.to_dict(), indent=2, ensure_ascii=False)),
+        html.escape(str(context.chat_data)),
+        html.escape(str(context.user_data)),
+        html.escape(tb)
+    )
+
+    # Finally, send the message
     devs = settings.get_var('DEVS')
-    # we want to notify the user of this problem. This will always work, but not notify users if the update is an
-    # callback or inline query, or a poll update. In case you want this, keep in mind that sending the message
-    # could fail
-    if update.effective_message:
-        text = "Hey. I'm sorry to inform you that an error happened while running your command..." \
-               "My developer will be notified immediatly."
-        update.effective_message.reply_text(text)
-    # This traceback is created with accessing the traceback object from the sys.exc_info, which is returned as the
-    # third value of the returned tuple. Then we use the traceback.format_tb to get the traceback as a string, which
-    # for a weird reason separates the line breaks in a list, but keeps the linebreaks itself. So just joining an
-    # empty string works fine.
-    trace = "".join(traceback.format_tb(sys.exc_info()[2]))
-    # lets try to get as much information from the telegram update as possible
-    payload = ""
-    # normally, we always have an user. If not, its either a channel or a poll update.
-    if update.effective_user:
-        payload += f' with the user {mention_html(update.effective_user.id, update.effective_user.first_name)}'
-    # there are more situations when you don't get a chat
-    if update.effective_chat:
-        payload += f' within the chat <i>{update.effective_chat.title}</i>'
-        if update.effective_chat.username:
-            payload += f' (@{update.effective_chat.username})'
-    # but only one where you have an empty payload by now: A poll (buuuh)
-    if update.poll:
-        payload += f' with the poll id {update.poll.id}.'
-    # lets put this in a "well" formatted text
-    text = f"Hey.\n The error <code>{context.error}</code> happened{payload}. The full traceback:\n\n<code>{trace}" \
-           f"</code>"
-    # and send it to the dev(s)
-    for dev_id in devs:
-        context.bot.send_message(dev_id, text, parse_mode=ParseMode.HTML)
-    # we raise the error again, so the logger module catches it. If you don't use the logger module, use it.
-    raise
+    for dev in devs:
+        context.bot.send_message(chat_id=dev, text=message, parse_mode=ParseMode.HTML)
 
 
 def conv_timeout(update, context):

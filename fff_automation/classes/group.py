@@ -33,6 +33,7 @@ class Group():
                  date='',
                  status=0,
                  activator_id='',
+                 activator_name='',
                  user_id='',
                  users='',
                  admin_string='',
@@ -61,6 +62,7 @@ class Group():
         self.date = date
         self.status = status
         self.activator_id = activator_id
+        self.activator_name = activator_name
         # CONVERSATION UTILS VARIABLES - DISCARDED
         self.user_id = user_id
         self.users = users

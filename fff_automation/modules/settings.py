@@ -16,6 +16,8 @@ TL_INFORMATION, TL_PLANNEDCALLS, TL_DG, TL_WG, TL_IP, TL_PASTCALLS, TL_ARCHIVE, 
     19)
 label_order = ['UPCOMING', 'CLOSED', 'RESTRICTED', 'OPEN', 'AFRICA', 'ASIA',
                'EUROPE', 'GLOBAL', 'NORTH AMERICA', 'OCEANIA', 'PAST', 'SOUTH AMERICA']
+CALL_DETAILS, EDIT_CALL, EDIT_ARGUMENT, ADD_TITLE, ADD_DATE, ADD_TIME, GROUP_INFO, EDIT_GROUP, ARGUMENT, INPUT_ARGUMENT, EDIT_IS_SUBGROUP, EDIT_PARENT, CATEGORY, REGION, RESTRICTION, IS_SUBGROUP, PARENT_GROUP, PURPOSE, ONBOARDING, COLOR, CANCEL_DELETE_GROUP, CONFIRM_DELETE_GROUP, DOUBLE_CONFIRM_DELETE_GROUP, FEEDBACK_TYPE, ISSUE_TYPE, INPUT_FEEDBACK = range(
+    26)
 global LOCAL
 
 
@@ -228,7 +230,8 @@ def set_database(users=None, groups=None, calls=None):
             onboarding text,
             date text NOT NULL,
             status integer NOT NULL,
-            activator_id integer NOT NULL
+            activator_id integer NOT NULL,
+            activator_name text NOT NULL
             )""")
     if not calls:
         c.execute("""CREATE TABLE calls (

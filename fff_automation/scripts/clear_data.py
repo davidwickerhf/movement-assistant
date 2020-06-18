@@ -7,7 +7,8 @@ from fff_automation.modules import sheet, settings, trelloc
 if __name__ == '__main__':
     # DELETE DATABASE
     os.remove('data.db')
-    sheet.clear_data()
     trelloc.clear_data()
+    sheet.clear_data()
+    
     print('CLEAR_DATA: Done')
     sys.exit(0)

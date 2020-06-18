@@ -67,8 +67,6 @@ def save_group(group):
     database.commit_group(group)
     print("INTERFACE: Saved group")
 
-    # SAVE IN KUMA BOARD
-
     # SHEET INTERFACE
     sheet.save_group(group)
     return card_url
@@ -146,7 +144,10 @@ def delete_group(group):
     group.calls = calls
 
     # SHEET INTERFACE
-    sheet.delete_group(group)
+    try:
+        sheet.delete_group(group)
+    except:
+        print('INTERFACE: Group non existent in Sheet')
 
     # REMOVE RECORD FROM GROUPS DATABASE
     database.delete_record(group.id, 'groups')

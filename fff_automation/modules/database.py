@@ -49,8 +49,9 @@ def commit_group(obj):
             onboarding,
             date,
             status,
-            activator_id
-            ) VALUES (:id, :card_id, :title, :category, :restriction, :region, :platform, :color, :is_subgroup, :parent_group, :purpose, :onboarding, :date, :status, :activator_id)''',
+            activator_id,
+            activator_name
+            ) VALUES (:id, :card_id, :title, :category, :restriction, :region, :platform, :color, :is_subgroup, :parent_group, :purpose, :onboarding, :date, :status, :activator_id, :activator_name)''',
                   {'id': obj.id,
                    'card_id': obj.card_id,
                    'title': obj.title,
@@ -65,7 +66,8 @@ def commit_group(obj):
                    'onboarding': obj.onboarding,
                    'date': obj.date,
                    'status': obj.status,
-                   'activator_id': obj.activator_id})
+                   'activator_id': obj.activator_id,
+                   'activator_name': obj.activator_name})
     conn.commit()
     conn.close()
 
@@ -134,6 +136,7 @@ def get(item_id='', table='groups', field='id'):
     conn.close()
     print('DATABASE: RESULT: ', results)
     if results == []:
+        print('DATABASE: No results where found from query: ', item_id)
         return [None]
     if not isinstance(results[0], tuple):
         results = [results]
@@ -155,7 +158,8 @@ def get(item_id='', table='groups', field='id'):
                 onboarding=result[11],
                 date=result[12],
                 status=result[13],
-                activator_id=result[14]
+                activator_id=result[14],
+                activator_name=result[15]
             )
             items.append(obj)
         elif table == 'calls':

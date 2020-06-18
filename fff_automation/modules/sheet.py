@@ -58,9 +58,9 @@ def save_group(group):
     parent_title = ''
     if group.is_subgroup:
         parent_title = database.get(group.parentgroup)[0].title
-    print("DATABASE: Saved group")
+    print("SHEET: Saved group | Parent: ", parent_title)
     groupchats.append_row([group.id, group.title, group.category, group.region, group.restriction,
-                           group.admin_string, group.platform, parent_title, group.purpose, group.onboarding, str(group.date), group.name])
+                           group.admin_string, group.platform, parent_title, group.purpose, group.onboarding, str(group.date), group.activator_name])
     # LOG
     log(str(group.date), group.user_id, 'ACTIVATE GROUP', group.title)
 
@@ -71,10 +71,11 @@ def edit_group(group):
     parent_title = ''
     parent = database.get(
         group.parentgroup, field='parent_group')[0]
-    if parent != None:
+    if group.is_subgroup:
         parent_title = parent.title
+    print("SHEET: Edited group | Parent: ", parent_title)
     groupchats.append_row([group.id, group.title, group.category, group.region, group.restriction,
-                           group.admin_string, group.platform, parent_title, group.purpose, group.onboarding, str(group.date), group.name])
+                           group.admin_string, group.platform, parent_title, group.purpose, group.onboarding, str(group.date), group.activator_name])
     # LOG
     log(str(group.date), group.user_id, 'EDIT_GROUP', group.title)
 
@@ -133,17 +134,17 @@ def clear_data():
     # CLEAR GROUPS SHEET
     rows = get_all_rows(sheet=groupchats)
     for row in rows:
-        groupchats.delete_row(rows.index(row) + 1)
+        groupchats.delete_row(rows.index(row) + 2)
 
     # CLEAR CALLS SHEET
     rows = get_all_rows(sheet=calls)
     for row in rows:
-        calls.delete_row(rows.index(row) + 1)
+        calls.delete_row(rows.index(row) + 2)
 
     # CLEAR ARCHIVE SHEET
     rows = get_all_rows(sheet=archive)
     for row in rows:
-        archive.delete_row(rows.index(row) + 1)
+        archive.delete_row(rows.index(row) + 2)
 
     # LOG CLEARING
     log(str(utils.now_time()), 'ADMIN', 'CLEAR DATA', '')

@@ -154,6 +154,9 @@ def dump_pkl(method, obj):
         chat_id = obj.id
     else:
         chat_id = obj.chat_id
+    path = r'fff_automation\bots\persistence'
+    if not os.path.exists(path):
+        os.makedirs(path)
     joblib.dump(
         obj, "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, chat_id, obj.user_id))
 
