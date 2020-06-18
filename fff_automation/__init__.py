@@ -1,5 +1,4 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from fff_automation.modules import settings
 from fff_automation.bots import telebot
 import telegram
