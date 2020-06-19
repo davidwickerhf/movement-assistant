@@ -39,12 +39,13 @@ class Group():
                  admin_string='',
                  name='',
                  message='',
-                 children='',
-                 siblings='',
+                 children=[],
+                 siblings=[],
                  calls='',
                  card_url='',
                  pgroup_last_index='',
-                 edit_argument=''
+                 edit_argument='',
+                 old_group=''
                  ):
         # GROUP ESSENTIAL VARIABLES - SAVED IN DATABASE
         self.id = id
@@ -75,6 +76,7 @@ class Group():
         self.card_url = card_url
         self.pgroup_last_index = pgroup_last_index
         self.edit_argument = edit_argument
+        self.old_group = old_group
 
     def get_color(self):
         colors = {

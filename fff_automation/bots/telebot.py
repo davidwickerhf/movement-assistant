@@ -479,11 +479,11 @@ def delete_group(update, context):
     elif member.status == "creator":
         print("BOT - Delete Group: Command was sent by owner/admin")
         markup = create_menu(['NO!', 'Yes, delete the group'], [0, 1])
-        message = update.message.reply_text(
+        group = database.get(chat_id)[0]
+        group.message = update.message.reply_text(
             text="<b>WARNING</b>\nBy deleting a group, it's information will be erased from the database and from the Trello Board. All tied calls events will be deleted from both the Trello Board and Google Calendar. Be aware that this action cannot be undone. Use /archivegroup if you are simply archiving the group.\n\nAre you sure you want to delete this group permanently?", reply_markup=markup, parse_mode=ParseMode.HTML)
 
         # ADD GROUP TO PERSISTANCE
-        group = database.get(chat_id)[0]
         group.user_id = user.id
         utils.dump_pkl('deletegroup', group)
         return CONFIRM_DELETE_GROUP
@@ -580,6 +580,7 @@ def edit_group(update, context):
         return ConversationHandler.END
 
     group.user_id = user_id
+    group.children = database.get(group.id, field='parent_group')
 
     # Send Argument Menu
     markup = create_menu([
@@ -741,7 +742,7 @@ def edit_is_subgroup(update, context):
             return ConversationHandler.END
 
         group.is_subgroup = True
-        markup = subgroup_menu(group, 1, type=EDIT_PARENT)
+        markup = subgroup_menu(group, 1, method='edit_group')
         query.edit_message_text(edit_parent_text)
         query.edit_message_reply_markup(markup)
         group.message = query.message
@@ -785,7 +786,7 @@ def edit_parent(update, context):
         return ConversationHandler.END
     elif query.data in (0, 1):
         markup = subgroup_menu(
-            group=group, direction=query.data, type=EDIT_PARENT)
+            group=group, direction=query.data, method='edit_group')
         query.edit_message_reply_markup(markup)
         group.message = query.message
         utils.dump_pkl('edit_group', group)
@@ -888,32 +889,36 @@ def cancel_edit_group(update, context):
 
 
 ####################### GROUP UTILS ----------------------------------------
-def subgroup_menu(group, direction, size=4, type=PARENT_GROUP):
+def subgroup_menu(group, direction, size=4, method='newgroup'):
     values = interface.rotate_groups(
         first_index=group.pgroup_last_index, direction=direction, size=size)
     print("TELEBOT: Rotated Groups: ", values)
     rotated_groups = values[0]
     print("Check 1 ", rotated_groups)
     group.pgroup_last_index = values[1]
-    utils.dump_pkl('newgroup', group)
+    utils.dump_pkl(method, group)
+    children_ids = []
+    for child in group.children:
+        if child != None:
+            children_ids.append(child.id)
     keyboard = []
     for pgroup in rotated_groups:
-        if pgroup.id != group.id:
+        if pgroup.id != group.id and pgroup.id not in children_ids:
             row = []
             group_id = pgroup.id
             print("TELEBOT: subgroup_menu(): Group Id: ", group_id)
-            title = database.get_group_title(group_id)
+            title = pgroup.title
             button = InlineKeyboardButton(text=title, callback_data=group_id)
             row.append(button)
             keyboard.append(row)
 
-    if type == PARENT_GROUP:
+    if method == 'newgroup':
         keyboard.append([InlineKeyboardButton('No Parent Group', callback_data='no_parent')])
 
     keyboard.append([InlineKeyboardButton(text="<=", callback_data=0),
                      InlineKeyboardButton(text="=>", callback_data=1)])
     
-    if type == EDIT_PARENT:
+    if method == 'edit_group':
         keyboard.append([InlineKeyboardButton('Cancel', callback_data='cancel')])
     markup = InlineKeyboardMarkup(keyboard)
     return markup

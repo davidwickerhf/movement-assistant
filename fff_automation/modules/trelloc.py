@@ -185,20 +185,19 @@ def edit_group(group):
                 str(parentcard_id))
     # Add eventual Children Info
     if group.children[0] != None:
-        description.append("\n**Subgroups:**")
+        description += "\n\n**Subgroups:**"
         for child in group.children:
-            description = description + "\n**Subgroups:**" + "\n- {} -> https://trello.com/c/{}".format(
+            description = description + "\n- {} -> https://trello.com/c/{}".format(
                 child.title,
                 child.card_id
             )
     update_card(group.card_id, desc=description)
 
     # Edit Parent Card Description
-    database_group = database.get(group.id)[0]
-    if group.parentgroup != database_group.parentgroup:
+    if group.parentgroup != group.old_group.parentgroup:
         print('TRELLOC: Parent has changed')
         print('TRELLOC: Siblings: ', group.siblings)
-        if group.is_subgroup:
+        if group.is_subgroup: 
             # Add attachment to new parent card description
             print('TRELLOC: New Parent Group Id: ', group.parentgroup)
             parent_group = database.get(group.parentgroup)[0]
@@ -214,23 +213,23 @@ def edit_group(group):
             )
             update_card(parent_card.id, desc=parent_description)
 
-        if database_group.is_subgroup:
+        if group.old_group.is_subgroup:
             # Remove attachment from old parent card description
-            parent_card = get_card(database.get(database_group.parentgroup)[0].card_id)
+            parent_card = get_card(database.get(group.old_group.parentgroup)[0].card_id)
             parent_description = parent_card.description
             description = re.sub(
                 "- {} -> {}".format(card.name, card.short_url), '', parent_description)
-            if len(group.siblings) < 1 or group.siblings == []:
+            if len(group.old_group.siblings) < 1 or group.old_group.siblings == []:
                 print('TRELLOC: edit_group(): No siblings, deleting Subgroups title')
                 description = description.replace('**Subgroups:**', '')
                 description = description.rstrip()
             update_card(parent_card.id, desc=description)
-    elif group.title != database_group.title:
-        # Card title has changed - change parent
-        parent_card = get_card(database.get(database_group.parentgroup))
+    elif group.title != group.old_group.title:
+        # Card title has changed - change parent card description
+        parent_card = get_card(database.get(group.old_group.parentgroup))
         parent_description = parent_card.description
         description = re.sub(
-            "- {} -> {}".format(database_group.title, card.short_url), '- {} -> {}'.format(card.name, card.short_url), parent_description)
+            "- {} -> {}".format(group.old_group.title, card.short_url), '- {} -> {}'.format(card.name, card.short_url), parent_description)
         update_card(parent_card.id, desc=description)
     
     if group.edit_argument == settings.CATEGORY:
@@ -363,8 +362,7 @@ def update_card(card_id, desc='', name='', due='', dueComplete=''):
     url += '&key={}&token={}'.format(TRELLO_KEY, TRELLO_TOKEN)
     headers = {"Accept": "application/json"}
     response = requests.request("PUT", url, headers=headers)
-    print(json.dumps(json.loads(response.text),
-                     sort_keys=True, indent=4, separators=(",", ": ")))
+    #print(json.dumps(json.loads(response.text),sort_keys=True, indent=4, separators=(",", ": ")))
 
 
 def clear_data():

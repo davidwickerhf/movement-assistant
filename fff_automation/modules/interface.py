@@ -76,7 +76,10 @@ def edit_group(group):
     print('INTERFACE: edit_group()')
     # EDIT TRELLO CARD
     group.children = database.get(group.id, field='parent_group')
-    group.siblings = database.get_siblings(database.get(group.id)[0])
+    group.old_group = database.get(group.id)[0]
+    group.old_group.siblings = database.get_siblings(group.old_group)
+    group.siblings = database.get_siblings(group)
+    
     trelloc.edit_group(group)
 
     # EDIT SHEET
@@ -121,7 +124,7 @@ def delete_group(group):
             children_cards.append(child.card_id)
             # DELETE CHILDREN LINKS IN DATABASE
             child.parentgroup = ''
-            child.is_subgroup = 'FALSE'
+            child.is_subgroup = False
             database.commit_group(child)
     print('DATABASE: delete_group(): Children Cards: ', children_cards)
 

@@ -133,17 +133,17 @@ def clear_data():
     # CLEAR GROUPS SHEET
     rows = get_all_rows(sheet=groupchats)
     for row in rows:
-        groupchats.delete_row(rows.index(row) + 2)
+        groupchats.delete_row(row)
 
     # CLEAR CALLS SHEET
     rows = get_all_rows(sheet=calls)
     for row in rows:
-        calls.delete_row(rows.index(row) + 2)
+        calls.delete_row(row)
 
     # CLEAR ARCHIVE SHEET
     rows = get_all_rows(sheet=archive)
     for row in rows:
-        archive.delete_row(rows.index(row) + 2)
+        archive.delete_row(row)
 
     # LOG CLEARING
     log(str(utils.now_time()), 'ADMIN', 'CLEAR DATA', '')
@@ -170,5 +170,8 @@ def find_row_by_id(sheet=groupchats, item_id="", col=1):
 
 def get_all_rows(sheet=groupchats):
     rows = sheet.get_all_values()
-    rows.pop(0)
-    return rows
+    rows_index = []
+    for row in rows:
+        rows_index.append(rows.index(row) + 1)
+    rows_index.pop(0)
+    return rows_index
