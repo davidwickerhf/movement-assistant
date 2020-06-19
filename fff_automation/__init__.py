@@ -1,6 +1,6 @@
 from flask import Flask
 from fff_automation.modules import settings
-from fff_automation.bots import telebot
+from fff_automation.bots.telebot import telebot
 import telegram
 
 # SETUP TELEGRAM BOT
