@@ -69,8 +69,7 @@ def edit_group(group):
     old_row = find_row_by_id(item_id=group.id)[0]
     groupchats.delete_row(old_row)
     parent_title = ''
-    parent = database.get(
-        group.parentgroup, field='parent_group')[0]
+    parent = database.get(group.parentgroup)[0]
     if group.is_subgroup:
         parent_title = parent.title
     print("SHEET: Edited group | Parent: ", parent_title)

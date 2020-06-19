@@ -197,11 +197,7 @@ def edit_group(group):
     database_group = database.get(group.id)[0]
     if group.parentgroup != database_group.parentgroup:
         print('TRELLOC: Parent has changed')
-        siblings = database.get(
-                database_group.parentgroup, field='parent_group')
-        for sibling in siblings:
-            if sibling.id == group.id:
-                siblings.remove(sibling)
+        print('TRELLOC: Siblings: ', group.siblings)
         if group.is_subgroup:
             # Add attachment to new parent card description
             print('TRELLOC: New Parent Group Id: ', group.parentgroup)
@@ -210,7 +206,7 @@ def edit_group(group):
             parent_card = get_card(parent_group.card_id)
             
             parent_description = parent_card.description
-            if len(siblings) < 1 or siblings[0] == None:
+            if len(group.siblings) < 1 or group.siblings == []:
                 parent_description += ("\n**Subgroups:**")
             parent_description += "\n- {} -> https://trello.com/c/{}".format(
                 group.title,
@@ -224,7 +220,8 @@ def edit_group(group):
             parent_description = parent_card.description
             description = re.sub(
                 "- {} -> {}".format(card.name, card.short_url), '', parent_description)
-            if len(siblings) < 1 or siblings[0] == None:
+            if len(group.siblings) < 1 or group.siblings == []:
+                print('TRELLOC: edit_group(): No siblings, deleting Subgroups title')
                 description = description.replace('**Subgroups:**', '')
                 description = description.rstrip()
             update_card(parent_card.id, desc=description)

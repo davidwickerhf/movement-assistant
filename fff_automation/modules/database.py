@@ -30,6 +30,18 @@ def get_group_card(group_id):
     return card_id
 
 
+def get_siblings(obj):
+    print('DATABASE: Query for ', obj.parentgroup)
+    siblings = get(item_id=obj.parentgroup, field='parent_group')
+    if siblings[0] == None:
+        print('DATABASE: get_siblings(): no siblings')
+        return []
+    for sibling in siblings:
+        if sibling.id == obj.id:
+            siblings.remove(sibling)
+    print('DATABASE: get_siblings(): ', siblings)
+    return siblings
+
 def commit_group(obj):
     conn = sqlite3.connect('data.db')
     c = conn.cursor()

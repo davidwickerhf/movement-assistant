@@ -749,6 +749,7 @@ def edit_is_subgroup(update, context):
         return EDIT_PARENT
     elif int(query.data) == 1:
         print('TELEBOT: edit_is_subgroup(): Group does not have parent')
+        group.message.edit_text(editing_group_text)
         group.is_subgroup = False
         group.parentgroup = ''
         # Save group into database and delete persistence file
@@ -790,7 +791,7 @@ def edit_parent(update, context):
         utils.dump_pkl('edit_group', group)
         return EDIT_PARENT
 
-
+    group.message.edit_text(editing_group_text)
     group.parentgroup = query.data
     # Save group into database and delete persistence file
     group = interface.edit_group(group)
@@ -801,8 +802,9 @@ def edit_parent(update, context):
     markup = InlineKeyboardMarkup([[InlineKeyboardButton(
         'Trello Card', url=group.card_url), InlineKeyboardButton('Edit Info', callback_data='edit_group')]])
     group.message.delete()
+    text = format_group_info(group, type=1)
     update.effective_chat.send_message(
-        edited_group_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+        text, reply_markup=markup, parse_mode=ParseMode.HTML)
     # End Conversation
     return ConversationHandler.END
 

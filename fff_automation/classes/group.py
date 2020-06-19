@@ -91,3 +91,6 @@ class Group():
         }
         color_str = colors.get(self.color)
         return color_str
+
+    def __repr__(self):
+        return '<Group({}, {}, {}, {})>'.format(self.id, self.title, self.activator_id, self.parentgroup)

@@ -49,7 +49,7 @@ def save_group(group):
     print("INTERFACE: Got Group Color")
 
     # CREATE TRELLO CARD
-    if group.is_subgroup == True:
+    if group.is_subgroup:
         parent_card = database.get_group_card(group.parentgroup)
         print("INTERFACE: Got parent card ", parent_card)
     else:
@@ -76,6 +76,7 @@ def edit_group(group):
     print('INTERFACE: edit_group()')
     # EDIT TRELLO CARD
     group.children = database.get(group.id, field='parent_group')
+    group.siblings = database.get_siblings(database.get(group.id)[0])
     trelloc.edit_group(group)
 
     # EDIT SHEET
@@ -126,10 +127,7 @@ def delete_group(group):
 
     # Get Parent
     parent_card = database.get_group_card(group.parentgroup)
-    siblings = database.get(item_id=group.parentgroup, field='parent_group')
-    for sibling in siblings:
-        if sibling.id == group.id:
-            siblings.remove(sibling)
+    siblings = database.get_siblings(group)
     print('DATABASE: Get Parent: ', group.parentgroup,
           ' ', parent_card, ' ', siblings)
 
