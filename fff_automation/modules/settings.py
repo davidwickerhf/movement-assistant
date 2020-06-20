@@ -1,5 +1,6 @@
-import os
 from trello import TrelloClient
+from cryptography.fernet import Fernet
+import os
 import gspread
 import requests
 import json
@@ -216,7 +217,7 @@ def set_database(users=None, groups=None, calls=None):
     c = conn.cursor()
     if not groups:
         c.execute("""CREATE TABLE groups (
-            id integer PRIMARY KEY,
+            id text PRIMARY KEY,
             card_id text NOT NULL,
             title text NOT NULL,
             category text NOT NULL,
@@ -230,13 +231,13 @@ def set_database(users=None, groups=None, calls=None):
             onboarding text,
             date text NOT NULL,
             status integer NOT NULL,
-            activator_id integer NOT NULL,
+            activator_id text NOT NULL,
             activator_name text NOT NULL
             )""")
     if not calls:
         c.execute("""CREATE TABLE calls (
             id text PRIMARY KEY,
-            chat_id integer NOT NULL,
+            chat_id text NOT NULL,
             card_id text NOT NULL,
             title text NOT NULL,
             date text NOT NULL,
@@ -251,11 +252,11 @@ def set_database(users=None, groups=None, calls=None):
             )""")
     if not users:
         c.execute("""CREATE TABLE users (
-            id integer PRIMARY KEY,
+            id text PRIMARY KEY,
             first text,
             last text,
             username text,
-            activator_id integer NOT NULL
+            activator_id text NOT NULL
             )""")
     conn.commit()
     conn.close()
@@ -308,6 +309,12 @@ def set_sheet(client):
     spreadsheet.share(value=get_var('GDRIVE_EMAIL'),
                       perm_type="user", role="owner")
     print("SETTINGS: Shared Spreadsheet with ", get_var('GDRIVE_EMAIL'))
+
+
+def set_encryption():
+    if get_var('CRYPTO_KEY') == -1:
+        key = Fernet.generate_key()
+        set_var('CRYPTO_KEY', key.decode('utf-8'))
 
 
 try:

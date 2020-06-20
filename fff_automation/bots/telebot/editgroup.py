@@ -10,8 +10,10 @@ def edit_group(update, context):
     group = database.get(chat_id)[0]
 
     if group == None:
-        update.effective_chat.send_message(
-            no_permission_edit_group, parse_mode=ParseMode.HTML)
+        if update.callback_query != None:
+            update.callback_query.edit_message_text(no_permission_edit_group, parse_mode=ParseMode.HTML)
+        else:
+            update.effective_chat.send_message(no_permission_edit_group, parse_mode=ParseMode.HTML)
         return ConversationHandler.END
 
     group.user_id = user_id
@@ -260,6 +262,7 @@ def input_edit_group_argument(update, context):
     try:
         if query.data == 'cancel_edit_group':
             cancel_edit_group(update, context)
+            return ConversationHandler.END
     except:
         print('TELEBOT: Not Cancel')
     group.message.edit_text(editing_group_text)
