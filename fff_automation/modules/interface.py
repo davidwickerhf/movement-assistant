@@ -42,7 +42,7 @@ def save_group(group):
 
     admins_string = admins_string[:-2]
     group.admins_string = admins_string
-    print("INTERFACE: Got Admins")
+    print("INTERFACE: Got Admins: ", group.admin_string)
 
     # GET RANDOM CALENDAR COLOR:
     color_id = utils.get_random_event_color()
@@ -110,7 +110,7 @@ def delete_group(group):
             print("DATABASE: Event", call)
             gcalendar.delete_event(call.id)
             trelloc.delete_call(call.card_id)
-            database.delete_record(item_id=call.id, table='calls')
+            database.delete_record(item_id=call.id, table=database.CALLS)
         else:
             calls.remove(call)
 
@@ -145,13 +145,10 @@ def delete_group(group):
     group.calls = calls
 
     # SHEET INTERFACE
-    try:
-        sheet.delete_group(group)
-    except:
-        print('INTERFACE: Group non existent in Sheet')
+    sheet.delete_group(group)
 
     # REMOVE RECORD FROM GROUPS DATABASE
-    database.delete_record(group.id, 'groups')
+    database.delete_record(group.id, database.GROUPS)
 
 
 def save_call(call):

@@ -42,7 +42,6 @@ def get_var(key="", parent="", default="", value=""):
         requested = variables.get(str(key))
     else:
         requested = variables[parent][str(key)]
-    print("SETTINGS: Requested: ", requested)
     if requested in ("", None, "insert_here", "insert_here_if_available"):
         if default == "":
             return -1
@@ -147,7 +146,7 @@ def set_trello(client, key, token):
     labels = board.get_labels()
     for label in labels:
         id = label.id
-        url = "https://api.trello.com/1/labels/{id}"
+        url = "https://api.trello.com/1/labels/{}".format(id)
         response = requests.request("DELETE", url)
     print("SETTINGS: Deleted Existing Labels")
 
@@ -217,7 +216,8 @@ def set_database(users=None, groups=None, calls=None):
     c = conn.cursor()
     if not groups:
         c.execute("""CREATE TABLE groups (
-            id text PRIMARY KEY,
+            key text PRIMARY KEY,
+            id text NOT NULL,
             card_id text NOT NULL,
             title text NOT NULL,
             category text NOT NULL,
@@ -236,7 +236,8 @@ def set_database(users=None, groups=None, calls=None):
             )""")
     if not calls:
         c.execute("""CREATE TABLE calls (
-            id text PRIMARY KEY,
+            key text PRIMARY KEY,
+            id text NOT NULL,
             chat_id text NOT NULL,
             card_id text NOT NULL,
             title text NOT NULL,
@@ -252,7 +253,8 @@ def set_database(users=None, groups=None, calls=None):
             )""")
     if not users:
         c.execute("""CREATE TABLE users (
-            id text PRIMARY KEY,
+            key text PRIMARY KEY,
+            id text NOT NULL,
             first text,
             last text,
             username text,

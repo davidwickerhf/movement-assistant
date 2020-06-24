@@ -199,7 +199,7 @@ def edit_group(group):
         print('TRELLOC: Siblings: ', group.siblings)
         if group.is_subgroup: 
             # Add attachment to new parent card description
-            print('TRELLOC: New Parent Group Id: ', group.parentgroup)
+            print('TRELLOC: New Parent Group Id: ', group.parentgroup, ' ', type(group.parentgroup))
             parent_group = database.get(group.parentgroup)[0]
             print('TRELLOC: New Parent Group: ', parent_group)
             parent_card = get_card(parent_group.card_id)

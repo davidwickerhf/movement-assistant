@@ -83,12 +83,14 @@ def subgroup_menu(group, direction, size=4, method='newgroup'):
     return markup
 
 
-def format_group_info(group, type=0):
+def format_group_info(group, type=0, error_text=''):
     print('TELEBOT: format_group_info()')
     if type == 0:
         text = '<b>{}</b> has been saved in the database!'.format(group.title)
     elif type == 1:
         text = edited_group_text
+    elif type == 2:
+        text = error_text
     text = text +  '''\n<b>Category:</b> {}\n<b>Restriction:</b> {}\n<b>Region:</b> {}\n<b>Color:</b> {}\n<b>Purpose:</b> {}\n<b>Onboarding:</b> {}'''.format(
         group.category, group.restriction, group.region, group.get_color(), group.purpose, group.onboarding)
     if group.is_subgroup:

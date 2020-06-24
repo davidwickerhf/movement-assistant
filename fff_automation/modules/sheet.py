@@ -58,22 +58,22 @@ def save_group(group):
     parent_title = ''
     if group.is_subgroup:
         parent_title = database.get(group.parentgroup)[0].title
-    print("SHEET: Saved group | Parent: ", parent_title)
-    groupchats.append_row([group.id, group.title, group.category, group.region, group.restriction,
+    print("SHEET: Saved group | Parent: ", parent_title, ' | Key: ', group.key)
+    groupchats.append_row([group.key, group.title, group.category, group.region, group.restriction,
                            group.admin_string, group.platform, parent_title, group.purpose, group.onboarding, str(group.date), group.activator_name])
     # LOG
     log(str(group.date), group.user_id, 'ACTIVATE GROUP', group.title)
 
 
 def edit_group(group):
-    old_row = find_row_by_id(item_id=group.id)[0]
+    old_row = find_row_by_id(item_id=group.key)[0]
     groupchats.delete_row(old_row)
     parent_title = ''
     parent = database.get(group.parentgroup)[0]
     if group.is_subgroup:
         parent_title = parent.title
     print("SHEET: Edited group | Parent: ", parent_title)
-    groupchats.append_row([group.id, group.title, group.category, group.region, group.restriction,
+    groupchats.append_row([group.key, group.title, group.category, group.region, group.restriction,
                            group.admin_string, group.platform, parent_title, group.purpose, group.onboarding, str(group.date), group.activator_name])
     # LOG
     log(str(group.date), group.user_id, 'EDIT_GROUP', group.title)
@@ -93,12 +93,13 @@ def delete_group(group):
     if group.children[0] != None:
         for child in group.children:
             print('DATABASE: delete_group(): Child: ', child)
-            row = find_row_by_id(item_id=group.id)[0]
+            row = find_row_by_id(item_id=group.key)[0]
             groupchats.update_cell(row, 8, '')
     print("DATABASE:  Deleted children")
 
     # REMOVE ROW FROM GROUPS SHEET
-    groupchats.delete_row(find_row_by_id(item_id=group.id)[0])
+    print('SHEET: Group Key: ', group.key)
+    groupchats.delete_row(find_row_by_id(item_id=group.key)[0])
 
     # REMOVE CALLS
     for call in group.calls:
@@ -110,7 +111,7 @@ def delete_group(group):
 
 def save_call(call):
     # SAVE IN SHEET
-    calls.append_row([call.id, database.get_group_title(call.chat_id), call.title, str(call.date), str(
+    calls.append_row([call.key, database.get_group_title(call.chat_id), call.title, str(call.date), str(
         call.time), call.duration_string, call.description, call.agenda_link, call.calendar_url, call.card_url, call.name])
 
     # LOG
@@ -119,7 +120,7 @@ def save_call(call):
 
 
 def delete_call(call):
-    call_row = find_row_by_id(sheet=calls, item_id=call.id)[0]
+    call_row = find_row_by_id(sheet=calls, item_id=call.key)[0]
     calls.delete_row(call_row)
     log(str(utils.now_time()), call.user_id, 'DELETE CALL',
         database.get_group_title(call.chat_id), call.title)

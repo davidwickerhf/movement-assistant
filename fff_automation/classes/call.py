@@ -11,10 +11,12 @@ class Call():
                  agenda_link='',
                  calendar_url='',
                  link='',
-                 user_id='',
+                 activator_id='',
                  status=0,
+                 key='',
                  message='',
                  message_id='',
+                 user_id='',
                  name='',
                  duration_string='',
                  card_url=''):
@@ -29,11 +31,13 @@ class Call():
         self.agenda_link = agenda_link
         self.calendar_url = calendar_url
         self.link = link
-        self.user_id = user_id
+        self.activator_id = activator_id
         self.status = status
 
+        self.key = key
         self.message = message
         self.message_id = message_id
+        self.user_id = user_id
         self.name = name
         self.duration_string = duration_string
         self.card_url = card_url

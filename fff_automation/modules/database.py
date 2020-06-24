@@ -5,6 +5,11 @@ from fff_automation.classes.call import Call
 from fff_automation.classes.group import Group
 from fff_automation.classes.user import User
 import ast
+import uuid
+
+GROUPS = 'groups'
+CALLS = 'calls' 
+USERS = 'users'
 
 
 def get_group_title(group_id):
@@ -46,8 +51,18 @@ def get_siblings(obj):
 def commit_group(obj):
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
+    obj.key = get_key(obj.id, GROUPS)
+    if not obj.key:
+        loop = True
+        while loop:
+            obj.key = uuid.uuid4().hex[:6].upper()
+            c.execute('''SELECT * FROM groups WHERE key=?''', (obj.key,))
+            results = c.fetchall()
+            if results in [None, []]:
+                loop = False
     if isinstance(obj, Group):
         c.execute('''INSERT OR REPLACE INTO groups(
+            key,
             id,
             card_id,
             title,
@@ -64,8 +79,9 @@ def commit_group(obj):
             status,
             activator_id,
             activator_name
-            ) VALUES (:id, :card_id, :title, :category, :restriction, :region, :platform, :color, :is_subgroup, :parent_group, :purpose, :onboarding, :date, :status, :activator_id, :activator_name)''',
-                  {'id': encryption.encrypt(obj.id),
+            ) VALUES (:key, :id, :card_id, :title, :category, :restriction, :region, :platform, :color, :is_subgroup, :parent_group, :purpose, :onboarding, :date, :status, :activator_id, :activator_name)''',
+                  {'key': obj.key,
+                   'id': encryption.encrypt(obj.id),
                    'card_id': encryption.encrypt(obj.card_id),
                    'title': obj.title,
                    'category': obj.category,
@@ -88,8 +104,18 @@ def commit_group(obj):
 def commit_call(obj):
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
+    obj.key = get_key(obj.id, CALLS)
+    if not obj.key:
+        loop = True
+        while loop:
+            obj.key = uuid.uuid4().hex[:6].upper()
+            c.execute('''SELECT * FROM calls WHERE key=?''', (obj.key,))
+            results = c.fetchall()
+            if results in [None, []]:
+                loop = False
     if isinstance(obj, Call):
         c.execute('''INSERT OR REPLACE INTO calls(
+            key,
             id,
             chat_id,
             card_id,
@@ -102,18 +128,19 @@ def commit_call(obj):
             calendar_url,
             link,
             user_id,
-            status) VALUES (:id, :chat_id, :card_id, :title, :date, :time, :duration, :description, :agenda_link, :calendar_url, :link, :user_id, :status)''', {
+            status) VALUES (:key, :id, :chat_id, :card_id, :title, :date, :time, :duration, :description, :agenda_link, :calendar_url, :link, :user_id, :status)''', {
+            'key': obj.key,
             'id': encryption.encrypt(obj.id),
             'chat_id': encryption.encrypt(obj.chat_id),
             'card_id': encryption.encrypt(obj.card_id),
-            'title': encryption.encrypt(obj.title),
+            'title': obj.title,
             'date': obj.date,
             'time': obj.time,
             'duration': obj.duration,
             'description': obj.description, 'agenda_link': encryption.encrypt(obj.agenda_link), 'calendar_url': encryption.encrypt(obj.calendar_url),
             'link': encryption.encrypt(obj.link),
             'user_id': encryption.encrypt(obj.user_id),
-            'status': obj.status, })
+            'status': obj.status})
     conn.commit()
     conn.close()
 
@@ -121,8 +148,18 @@ def commit_call(obj):
 def commit_user(obj):
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
+    obj.key = get_key(obj.id, USERS)
+    if not obj.key:
+        loop = True
+        while loop:
+            obj.key = uuid.uuid4().hex[:6].upper()
+            c.execute('''SELECT * FROM users WHERE key=?''', (obj.key,))
+            results = c.fetchall()
+            if results in [None, []]:
+                loop = False
     if isinstance(obj, User):
         c.execute("INSERT OR REPLACE INTO users(id, first, last, username, activator_id) VALUES (:id, :first, :last, :username, :activator_id)", {
+            'key': obj.key,
             'id': encryption.encrypt(obj.id),
             'first': encryption.encrypt(obj.first),
             'last': encryption.encrypt(obj.last),
@@ -139,79 +176,106 @@ def get(item_id='', table='groups', field='id', encrypt=True):
     """
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
-    if item_id == '':
-        sqlstr = 'SELECT * FROM {}'.format(table)
-        c.execute(sqlstr)
-    else:
-        if encrypt:
-            item_id = encryption.encrypt(item_id)
-        sqlstr = "SELECT * FROM {} WHERE {}=?".format(table, field)
-        c.execute(sqlstr, (item_id,))
+    sqlstr = "SELECT * FROM {}".format(table)
+    c.execute(sqlstr)
     results = c.fetchall()
     conn.close()
-    print('DATABASE: RESULT: ', results)
-    if results == []:
-        print('DATABASE: No results where found from query: ', item_id)
-        return [None]
-    if not isinstance(results[0], tuple):
-        results = [results]
+    
+    if results not in [None, []]:
+        if not isinstance(results[0], tuple):
+            results = [results]
+
     items = []
     for result in results:
         if table == 'groups':
             obj = Group(
-                id=encryption.decrypt(result[0]),
-                card_id=encryption.decrypt(result[1]),
-                title=result[2],
-                category=result[3],
-                restriction=result[4],
-                region=result[5],
-                platform=result[6],
-                color=result[7],
-                is_subgroup=ast.literal_eval(result[8]),
-                parentgroup=encryption.decrypt(result[9]),
-                purpose=result[10],
-                onboarding=result[11],
-                date=result[12],
-                status=result[13],
-                activator_id=encryption.decrypt(result[14]),
-                activator_name=encryption.decrypt(result[15])
-            )
-            items.append(obj)
-        elif table == 'calls':
-            obj = Call(
-                id=encryption.decrypt(result[0]),
-                chat_id=encryption.decrypt(result[1]),
+                key=result[0],
+                id=encryption.decrypt(result[1]),
                 card_id=encryption.decrypt(result[2]),
                 title=result[3],
-                date=result[4],
-                time=result[5],
-                duration=result[6],
-                description=result[7],
-                agenda_link=encryption.decrypt(result[8]),
-                calendar_url=encryption.decrypt(result[9]),
-                link=encryption.decrypt(result[10]),
-                user_id=encryption.decrypt(result[11]),
-                status=result[12],
+                category=result[4],
+                restriction=result[5],
+                region=result[6],
+                platform=result[7],
+                color=result[8],
+                is_subgroup=ast.literal_eval(result[9]),
+                parentgroup=encryption.decrypt(result[10]),
+                purpose=result[11],
+                onboarding=result[12],
+                date=result[13],
+                status=result[14],
+                activator_id=encryption.decrypt(result[15]),
+                activator_name=encryption.decrypt(result[16])
             )
-            items.append(obj)
+            if obj.is_subgroup:
+                obj.parentgroup = int(obj.parentgroup)
+        elif table == 'calls':
+            obj = Call(
+                key=result[0],
+                id=encryption.decrypt(result[1]),
+                chat_id=encryption.decrypt(result[2]),
+                card_id=encryption.decrypt(result[3]),
+                title=result[4],
+                date=result[5],
+                time=result[6],
+                duration=result[7],
+                description=result[8],
+                agenda_link=encryption.decrypt(result[9]),
+                calendar_url=encryption.decrypt(result[10]),
+                link=encryption.decrypt(result[11]),
+                activator_id=encryption.decrypt(result[12]),
+                status=result[13],
+            )
         elif table == 'users':
             obj = User(
-                id=encryption.decrypt(result[0]),
-                first=encryption.decrypt(result[1]),
-                last=encryption.decrypt(result[2]),
-                username=encryption.decrypt(result[3]),
-                activator_id=encryption.decrypt(result[4])
+                key=result[0],
+                id=encryption.decrypt(result[1]),
+                first=encryption.decrypt(result[2]),
+                last=encryption.decrypt(result[3]),
+                username=encryption.decrypt(result[4]),
+                activator_id=encryption.decrypt(result[5])
             )
+
+        if field == 'id':
+            check = obj.id
+            print('DATABASE: get(): check: ', check, ' ', type(check))
+        elif field == 'parent_group':
+            check = obj.parentgroup
+        elif field == 'activator_id':
+            check = obj.activator_id
+        elif field == 'chat_id':
+            check = obj.chat_id
+
+        if item_id == '' or check == item_id:
             items.append(obj)
+
+    if items == []:
+        print('DATABASE: No results where found from query')
+        items = [None]
+
     return items
 
 
-def delete_record(item_id, table, field='id'):
+def get_key(id, table):
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
-    sqlstr = "DELETE FROM {table} WHERE {field}=?".format(
-        table=table, field=field)
-    c.execute(sqlstr, (item_id,))
+    sqlstr = 'SELECT * FROM {}'.format(table)
+    c.execute(sqlstr)
+    results = c.fetchall()
+    conn.close()
+
+    for item in results:
+        if encryption.decrypt(item[1]) == id:
+             return item[0]
+    return None
+
+
+def delete_record(item_id, table):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    key = get_key(item_id, table)
+    sqlstr = "DELETE FROM {table} WHERE key=?".format(table=table)
+    c.execute(sqlstr, (key,))
     conn.commit()
     conn.close()
 

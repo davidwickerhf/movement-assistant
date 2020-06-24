@@ -12,7 +12,6 @@ def encrypt(value):
     cipher_suite = Fernet(key)
     ciphered_text = cipher_suite.encrypt(str(value).encode('UTF-8'))
     plain_text = bytes(ciphered_text).decode('utf-8')
-    print(plain_text)
     return plain_text
 
 
@@ -25,9 +24,8 @@ def decrypt(value):
     cipher_suite = Fernet(key)
     uncipher_text = cipher_suite.decrypt(value.encode('UTF-8'))
     plain_text = bytes(uncipher_text).decode('utf-8')
-    print(plain_text)
     try:
         result = int(plain_text)
     except:
-        result = str(plain_text)
+        result = plain_text
     return result

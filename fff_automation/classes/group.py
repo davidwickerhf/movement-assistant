@@ -34,6 +34,7 @@ class Group():
                  status=0,
                  activator_id='',
                  activator_name='',
+                 key='',
                  user_id='',
                  users='',
                  admin_string='',
@@ -48,6 +49,7 @@ class Group():
                  old_group=''
                  ):
         # GROUP ESSENTIAL VARIABLES - SAVED IN DATABASE
+        self.key = key
         self.id = id
         self.card_id = card_id
         self.title = title
