@@ -228,7 +228,7 @@ def edit_parent(update, context):
         # Cancel Edit Group
         cancel_edit_group(update, context)
         return ConversationHandler.END
-    elif query.data in (0, 1):
+    elif int(query.data) in (0, 1):
         markup = subgroup_menu(
             group=group, direction=query.data, method='edit_group')
         query.edit_message_reply_markup(markup)

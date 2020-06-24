@@ -158,7 +158,7 @@ def commit_user(obj):
             if results in [None, []]:
                 loop = False
     if isinstance(obj, User):
-        c.execute("INSERT OR REPLACE INTO users(id, first, last, username, activator_id) VALUES (:id, :first, :last, :username, :activator_id)", {
+        c.execute("INSERT OR REPLACE INTO users(key, id, first, last, username, activator_id) VALUES (:key, :id, :first, :last, :username, :activator_id)", {
             'key': obj.key,
             'id': encryption.encrypt(obj.id),
             'first': encryption.encrypt(obj.first),

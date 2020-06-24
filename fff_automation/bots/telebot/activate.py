@@ -233,7 +233,7 @@ def parent_group(update, context):
         group.message = query.message
         utils.dump_pkl('newgroup', group)
         return PURPOSE
-    elif query.data in (0, 1):
+    elif int(query.data) in (0, 1):
         markup = subgroup_menu(
             group=group, direction=query.data)
         query.edit_message_reply_markup(markup)
