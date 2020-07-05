@@ -67,18 +67,11 @@ class Group():
         self.activator_id = activator_id
         self.activator_name = activator_name
         # CONVERSATION UTILS VARIABLES - DISCARDED
-        self.user_id = user_id
-        self.users = users
         self.admin_string = admin_string
-        self.name = name
-        self.message = message
         self.children = children
         self.siblings = siblings
         self.calls = calls
-        self.card_url = card_url
-        self.pgroup_last_index = pgroup_last_index
-        self.edit_argument = edit_argument
-        self.old_group = old_group
+        self.users = users
 
     def get_color(self):
         colors = {

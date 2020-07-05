@@ -25,7 +25,6 @@ class Feedback():
         self.state = state
         self.url = url
         self.id = id
-        self.message = message
 
     def get_type(self):
         return self.type

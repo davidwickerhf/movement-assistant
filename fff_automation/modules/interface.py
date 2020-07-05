@@ -7,13 +7,15 @@ from fff_automation.modules import gcalendar, trelloc, settings, utils, sheet, d
 from fff_automation.classes.group import Group
 from fff_automation.classes.call import Call
 from fff_automation.classes.user import User
+from fff_automation.classes.botupdate import BotUpdate
 from datetime import datetime
 
 REGULAR, ARCHIVED, DELETED = range(3)
 
 
-def save_group(group):
+def save_group(botupdate: BotUpdate):
     # REGISTER ALL USERS
+    group = botupdate.obj
     users = []
     admins_string = ""
     for member in group.users:
@@ -32,7 +34,7 @@ def save_group(group):
             first=first,
             last=last,
             username=username,
-            activator_id=group.user_id
+            activator_id=group.activator_id
         )
         database.commit_user(obj)
 
@@ -55,7 +57,7 @@ def save_group(group):
     else:
         parent_card = ""
         print("INTERFACE: No parent")
-    card_info = trelloc.add_group(group)
+    card_info = trelloc.add_group(botupdate)
     card_id = card_info[0]
     card_url = card_info[1]
     print("INTERFACE: Got Trello Card Info")
@@ -68,26 +70,27 @@ def save_group(group):
     print("INTERFACE: Saved group")
 
     # SHEET INTERFACE
-    sheet.save_group(group)
+    sheet.save_group(botupdate)
     return card_url
 
 
-def edit_group(group):
+def edit_group(botupdate: BotUpdate):
     print('INTERFACE: edit_group()')
     # EDIT TRELLO CARD
+    group = botupdate.obj
     group.children = database.get(group.id, field='parent_group')
-    group.old_group = database.get(group.id)[0]
-    group.old_group.siblings = database.get_siblings(group.old_group)
+    botupdate.old_obj = database.get(group.id)[0]
+    botupdate.old_obj.siblings = database.get_siblings(botupdate.old_obj)
     group.siblings = database.get_siblings(group)
     
-    trelloc.edit_group(group)
+    trelloc.edit_group(botupdate)
 
     # EDIT SHEET
-    sheet.edit_group(group)
+    sheet.edit_group(botupdate)
 
     # UPDATE DATABASE
     database.commit_group(group)
-    return group
+    return botupdate
 
 
 def archive_group(chat_id, user_id):
@@ -99,10 +102,10 @@ def archive_group(chat_id, user_id):
     # function is not complete
 
 
-def delete_group(group):
+def delete_group(botupdate: BotUpdate):
     print("DATABASE: Delete Group Started")
-    group = database.get(item_id=group.id)[0]
     print("DATABASE: Got Group info")
+    group = botupdate.obj
 
     calls = database.get(group.id, table='calls', field='chat_id')
     for call in calls:
@@ -145,14 +148,15 @@ def delete_group(group):
     group.calls = calls
 
     # SHEET INTERFACE
-    sheet.delete_group(group)
+    sheet.delete_group(botupdate)
 
     # REMOVE RECORD FROM GROUPS DATABASE
     database.delete_record(group.id, database.GROUPS)
 
 
-def save_call(call):
+def save_call(botupdate):
     # SAVE TO CALENDAR
+    call = botupdate.obj
     group_title = database.get_group_title(call.chat_id)
     group_color = database.get_group_color(call.chat_id)
     values = gcalendar.add_event(
@@ -170,9 +174,7 @@ def save_call(call):
     call.duration_string = duration_string
 
     # SAVE IN TRELLO
-    values = trelloc.add_call(call)
-    trello_url = values[1]
-    card_id = values[0]
+    trelloc.add_call(botupdate)
 
     # FORMAT DATE STRINGS
     date_string = datetime.strftime(call.date, '%Y/%m/%d')
@@ -184,15 +186,14 @@ def save_call(call):
     call.id = event_id
     call.date = date_string
     call.time = time_string
-    call.card_id = card_id
     call.calendar_url = calendar_url
-    call.card_url = 'https://trello.com/c/{}'.format(call.card_id)
+    botupdate.card_url = 'https://trello.com/c/{}'.format(call.card_id)
     database.commit_call(call)
     print("Saved call in database")
 
     # SHEET INTERFACE
-    sheet.save_call(call)
-    return [calendar_url, trello_url]
+    sheet.save_call(botupdate)
+    return botupdate
 
 
 def rotate_groups(first_index, direction, size=5):

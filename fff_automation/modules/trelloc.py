@@ -3,6 +3,7 @@ import emoji
 from fff_automation.modules import utils
 from trello import TrelloClient
 from fff_automation.modules import settings, database
+from fff_automation.classes.botupdate import BotUpdate
 import requests
 import json
 import re
@@ -96,7 +97,8 @@ DISCUSSION_GROUP = "Discussion Group"
 PROJECT = "Project/Event"
 
 
-def add_group(group):
+def add_group(botupdate: BotUpdate):
+    group = botupdate.obj
     # SET LABELS
     labels = []
     if group.region != "":
@@ -124,7 +126,7 @@ def add_group(group):
 
     # ATTACH PARENT CARD LINK TO DESCRIPTION
     if group.is_subgroup:
-        print("TRELLOC: Parent ID:", group.parentgroup)
+        print("TRELLOC: Parent ID:", group.parentgroup, ' type: ', type(group.parentgroup))
         parentcard_id = database.get_group_card(group.parentgroup)
         print('TRELLOC: Parent Card: ', parentcard_id)
         description = description + \
@@ -168,8 +170,9 @@ def add_group(group):
     return [card_id, card_url]
 
 
-def edit_group(group):
+def edit_group(botupdate: BotUpdate):
     print('TRELLOC: edit_group()')
+    group = botupdate.obj
     # Get Card
     card = get_card(database.get_group_card(group.id))
 
@@ -194,7 +197,7 @@ def edit_group(group):
     update_card(group.card_id, desc=description)
 
     # Edit Parent Card Description
-    if group.parentgroup != group.old_group.parentgroup:
+    if group.parentgroup != botupdate.old_obj.parentgroup:
         print('TRELLOC: Parent has changed')
         print('TRELLOC: Siblings: ', group.siblings)
         if group.is_subgroup: 
@@ -213,26 +216,26 @@ def edit_group(group):
             )
             update_card(parent_card.id, desc=parent_description)
 
-        if group.old_group.is_subgroup:
+        if botupdate.old_obj.is_subgroup:
             # Remove attachment from old parent card description
-            parent_card = get_card(database.get(group.old_group.parentgroup)[0].card_id)
+            parent_card = get_card(database.get(botupdate.old_obj.parentgroup)[0].card_id)
             parent_description = parent_card.description
             description = re.sub(
                 "- {} -> {}".format(card.name, card.short_url), '', parent_description)
-            if len(group.old_group.siblings) < 1 or group.old_group.siblings == []:
+            if len(botupdate.old_obj.siblings) < 1 or botupdate.old_obj.siblings == []:
                 print('TRELLOC: edit_group(): No siblings, deleting Subgroups title')
                 description = description.replace('**Subgroups:**', '')
                 description = description.rstrip()
             update_card(parent_card.id, desc=description)
-    elif group.title != group.old_group.title:
+    elif group.title != botupdate.old_obj.title:
         # Card title has changed - change parent card description
-        parent_card = get_card(database.get(group.old_group.parentgroup))
+        parent_card = get_card(database.get(botupdate.old_obj.parentgroup))
         parent_description = parent_card.description
         description = re.sub(
-            "- {} -> {}".format(group.old_group.title, card.short_url), '- {} -> {}'.format(card.name, card.short_url), parent_description)
+            "- {} -> {}".format(botupdate.old_obj.title, card.short_url), '- {} -> {}'.format(card.name, card.short_url), parent_description)
         update_card(parent_card.id, desc=description)
     
-    if group.edit_argument == settings.CATEGORY:
+    if botupdate.edit_argument == settings.CATEGORY:
         # Update Column Position
         if group.category == WORKING_GROUP:
             card.change_list(settings.get_var(settings.TL_WG, 'lists'))
@@ -240,14 +243,14 @@ def edit_group(group):
             card.change_list(settings.get_var(settings.TL_DG, 'lists'))
         elif group.category == PROJECT:
             card.change_list(settings.get_var(settings.TL_IP, 'lists'))
-    elif group.edit_argument in [settings.REGION, settings.RESTRICTION]:
+    elif botupdate.edit_argument in [settings.REGION, settings.RESTRICTION]:
         # Update Labels
         labels = card.labels
         for label in labels:
             card.remove_label(label)
         card.add_label(client.get_label(regions[group.region], board_id))
         card.add_label(client.get_label(restrictions[group.restriction], board_id))
-    group.card_url = 'https://trello.com/c/{}'.format(group.card_id)
+    botupdate.card_url = 'https://trello.com/c/{}'.format(group.card_id)
 
 
 def delete_group(card_id, parentcard_id="", childrencards_id=[], siblings=[]):
@@ -284,10 +287,11 @@ def delete_group(card_id, parentcard_id="", childrencards_id=[], siblings=[]):
         update_card(children_id, desc=description)
 
 
-def add_call(call):
+def add_call(botupdate: BotUpdate):
     print("TRELLO: --- ADD CALL ---")
     # GET INFORMATION TO PASS ON
     # add try: exept: statement
+    call = botupdate.obj
     parent_card = get_card(
         database.get_group_card(
             database.get(
@@ -316,9 +320,9 @@ def add_call(call):
     newcard.attach(name="Parent Group", url=parent_card.short_url)
 
     # RETURN VALUES
-    card_url = newcard.short_url
-    card_id = card_url.replace('https://trello.com/c/', '')
-    return [card_id, card_url]
+    botupdate.card_url = newcard.short_url
+    call.card_id = botupdate.card_url.replace('https://trello.com/c/', '')
+    return botupdate
 
 
 def delete_call(short_url):

@@ -127,8 +127,8 @@ def commit_call(obj):
             agenda_link,
             calendar_url,
             link,
-            user_id,
-            status) VALUES (:key, :id, :chat_id, :card_id, :title, :date, :time, :duration, :description, :agenda_link, :calendar_url, :link, :user_id, :status)''', {
+            activator_id,
+            status) VALUES (:key, :id, :chat_id, :card_id, :title, :date, :time, :duration, :description, :agenda_link, :calendar_url, :link, :activator_id, :status)''', {
             'key': obj.key,
             'id': encryption.encrypt(obj.id),
             'chat_id': encryption.encrypt(obj.chat_id),
@@ -139,7 +139,7 @@ def commit_call(obj):
             'duration': obj.duration,
             'description': obj.description, 'agenda_link': encryption.encrypt(obj.agenda_link), 'calendar_url': encryption.encrypt(obj.calendar_url),
             'link': encryption.encrypt(obj.link),
-            'user_id': encryption.encrypt(obj.user_id),
+            'activator_id': encryption.encrypt(obj.activator_id),
             'status': obj.status})
     conn.commit()
     conn.close()
@@ -169,7 +169,7 @@ def commit_user(obj):
     conn.close()
 
 
-def get(item_id='', table='groups', field='id', encrypt=True):
+def get(item_id='', table='groups', field='id'):
     """
     Return a list of group/call/user objects that match the query of the item_id.
     Returns [None] if there is no result

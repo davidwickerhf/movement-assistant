@@ -26,18 +26,17 @@ def save_group(update, context):
             platform="Telegram",
             activator_id=user_id,
             activator_name=update.effective_user.name,
-            user_id=user_id,
-            message=update.message
         )
+        botupdate = BotUpdate(obj=group, update=update, user=update.effective_user, message=update.message)
 
         # CREATE MARKUP FOR CATEOGORY CHOICE:
         markup = create_menu(
             [interface.trelloc.WORKING_GROUP, interface.trelloc.DISCUSSION_GROUP, interface.trelloc.PROJECT], [interface.trelloc.WORKING_GROUP, interface.trelloc.DISCUSSION_GROUP, interface.trelloc.PROJECT])
 
         # SEND MESSAGE WITH INTRO AND REQUEST OF CATEGORY
-        group.message = chat.send_message(
+        botupdate.message = chat.send_message(
             text=save_group_message, parse_mode=ParseMode.HTML, reply_markup=markup)
-        utils.dump_pkl('newgroup', group)
+        utils.dump_pkl('newgroup', botupdate)
         return CATEGORY
     else:
         print("Group is already registered")
@@ -55,12 +54,13 @@ def category(update, context):
     print("TELEBOT: CATEGORY: Chat Instance: ", chat_id)
     query.answer()
 
-    if utils.load_pkl('newgroup', chat_id, user_id) == "":
+    if utils.load_pkl('newgroup', chat_id, user_id) == None:
         print("TELEBOT: ERROR - Persistence file not found")
         return CATEGORY
 
     # LOAD PERSISTENCE FILE
-    group = utils.load_pkl('newgroup', chat_id, user_id)
+    botupdate = utils.load_pkl('newgroup', chat_id, user_id)
+    group = botupdate.obj
     if user_id != group.activator_id:
         return CATEGORY
     else:
@@ -80,8 +80,8 @@ def category(update, context):
     # EDIT MESSAGE TEXT AND MARKUP -  REQUEST REGION
     query.edit_message_text(text, parse_mode=ParseMode.HTML)
     query.edit_message_reply_markup(markup)
-    group.message = query.message
-    utils.dump_pkl('newgroup', group)
+    botupdate.message = query.message
+    utils.dump_pkl('newgroup', botupdate)
     return REGION
 
 
@@ -93,12 +93,13 @@ def region(update, context):
     chat_id = update.effective_chat.id
     query.answer()
 
-    if utils.load_pkl('newgroup', chat_id, user_id) == "":
+    if utils.load_pkl('newgroup', chat_id, user_id) == None:
         print("TELEBOT: ERROR - Persistence file not found")
         return REGION
 
     # LOAD PERSISTENCE FILE
-    group = utils.load_pkl('newgroup', chat_id, user_id)
+    botupdate = utils.load_pkl('newgroup', chat_id, user_id)
+    group = botupdate.obj
     if user_id != group.activator_id:
         return REGION
     else:
@@ -114,8 +115,8 @@ def region(update, context):
                           interface.trelloc.restrictions['Closed']])
     query.edit_message_text(text, parse_mode=ParseMode.HTML)
     query.edit_message_reply_markup(markup)
-    group.message = query.message
-    utils.dump_pkl('newgroup', group)
+    botupdate.message = query.message
+    utils.dump_pkl('newgroup', botupdate)
     return RESTRICTION
 
 
@@ -127,12 +128,13 @@ def restriction(update, context):
     chat_id = update.effective_chat.id
     query.answer()
 
-    if utils.load_pkl('newgroup', chat_id, user_id) == "":
+    if utils.load_pkl('newgroup', chat_id, user_id) == None:
         print("TELEBOT: ERROR - Persistence file not found")
         return RESTRICTION
 
     # LOAD PERSISTENCE FILE
-    group = utils.load_pkl('newgroup', chat_id, user_id)
+    botupdate = utils.load_pkl('newgroup', chat_id, user_id)
+    group = botupdate.obj
     if user_id != group.activator_id:
         return RESTRICTION
     else:
@@ -144,8 +146,8 @@ def restriction(update, context):
     markup = create_menu(["No", "Yes"], [0, 1], cols=2)
     query.edit_message_text(text, parse_mode=ParseMode.HTML)
     query.edit_message_reply_markup(markup)
-    group.message = query.message
-    utils.dump_pkl('newgroup', group)
+    botupdate.message = query.message
+    utils.dump_pkl('newgroup', botupdate)
     return IS_SUBGROUP
 
 
@@ -157,12 +159,13 @@ def is_subgroup(update, context):
     chat_id = update.effective_chat.id
     query.answer()
 
-    if utils.load_pkl('newgroup', chat_id, user_id) == "":
+    if utils.load_pkl('newgroup', chat_id, user_id) == None:
         print("TELEBOT: ERROR - Persistence file not found")
         return IS_SUBGROUP
 
     # LOAD PERSISTENCE FILE
-    group = utils.load_pkl('newgroup', chat_id, user_id)
+    botupdate = utils.load_pkl('newgroup', chat_id, user_id)
+    group = botupdate.obj
     if user_id != group.activator_id:
         return IS_SUBGROUP
 
@@ -176,11 +179,11 @@ def is_subgroup(update, context):
             print("BOT: Groups found")
             text = "Alright, select below the parent group of this group chat:"
             markup = subgroup_menu(
-                group=group, direction=1)
+                botupdate=botupdate, direction=1)
             query.edit_message_text(text)
             query.edit_message_reply_markup(markup)
-            group.message = query.message
-            utils.dump_pkl('newgroup', group)
+            botupdate.message = query.message
+            utils.dump_pkl('newgroup', botupdate)
             return PARENT_GROUP
         else:
             print("BOT: No groups available for parents")
@@ -189,8 +192,8 @@ def is_subgroup(update, context):
             markup = create_menu(["Next"], [0])
             query.edit_message_text(text, parse_mode=ParseMode.HTML)
             query.edit_message_reply_markup(markup)
-            group.message = query.message
-            utils.dump_pkl('newgroup', group)
+            botupdate.message = query.message
+            utils.dump_pkl('newgroup', botupdate)
             return IS_SUBGROUP
     elif query.data == str(0):
         print("BOT: No parents")
@@ -201,8 +204,8 @@ def is_subgroup(update, context):
         markup = create_menu(["Skip"], ["skip"])
         query.edit_message_text(text, parse_mode=ParseMode.HTML)
         query.edit_message_reply_markup(markup)
-        group.message = query.message
-        utils.dump_pkl('newgroup', group)
+        botupdate.message = query.message
+        utils.dump_pkl('newgroup', botupdate)
         return PURPOSE
 
 
@@ -214,12 +217,13 @@ def parent_group(update, context):
     chat_id = update.effective_chat.id
     query.answer()
 
-    if utils.load_pkl('newgroup', chat_id, user_id) == "":
+    if utils.load_pkl('newgroup', chat_id, user_id) == None:
         print("TELEBOT: ERROR - Persistence file not found")
         return PARENT_GROUP
 
     # LOAD PERSISTENCE FILE
-    group = utils.load_pkl('newgroup', chat_id, user_id)
+    botupdate = utils.load_pkl('newgroup', chat_id, user_id)
+    group = botupdate.obj
     if user_id != group.activator_id:
         return PARENT_GROUP
 
@@ -230,27 +234,27 @@ def parent_group(update, context):
         markup = create_menu(["Skip"], ["skip"])
         query.edit_message_text(text, parse_mode=ParseMode.HTML)
         query.edit_message_reply_markup(markup)
-        group.message = query.message
-        utils.dump_pkl('newgroup', group)
+        botupdate.message = query.message
+        utils.dump_pkl('newgroup', botupdate)
         return PURPOSE
     elif int(query.data) in (0, 1):
         markup = subgroup_menu(
-            group=group, direction=query.data)
+            botupdate=botupdate, direction=query.data)
         query.edit_message_reply_markup(markup)
-        group.message = query.message
-        utils.dump_pkl('newgroup', group)
+        botupdate.message = query.message
+        utils.dump_pkl('newgroup', botupdate)
         return PARENT_GROUP
     else:
         print("TELEBOT: parent_group(): Query Data: ", query.data)
-        group.parentgroup = query.data
+        group.parentgroup = int(query.data)
 
         # SET NEW TEXT AND MARKAP FOR PURPOSE REQUEST
         text = "Great! Last two steps! Please reply to this message with a short description of the purpose and mandate of the group.\nYou can skip this step by clicking the button below."
         markup = create_menu(["Skip"], ["skip"])
         query.edit_message_text(text, parse_mode=ParseMode.HTML)
         query.edit_message_reply_markup(markup)
-        group.message = query.message
-        utils.dump_pkl('newgroup', group)
+        botupdate.message = query.message
+        utils.dump_pkl('newgroup', botupdate)
         return PURPOSE
 
 
@@ -266,11 +270,12 @@ def purpose(update, context):
         user_id = update.callback_query.from_user.id
         chat_id = update.effective_chat.id
 
-    if utils.load_pkl('newgroup', chat_id, user_id) == "":
+    if utils.load_pkl('newgroup', chat_id, user_id) == None:
         print("TELEBOT: ERROR - Persistence file not found")
         return PURPOSE
     # LOAD PERSISTENCE FILE
-    group = utils.load_pkl('newgroup', chat_id, user_id)
+    botupdate = utils.load_pkl('newgroup', chat_id, user_id)
+    group = botupdate.obj
     if user_id != group.activator_id:
         return PURPOSE
 
@@ -281,8 +286,8 @@ def purpose(update, context):
         markup = create_menu(["Skip"], ["skip"])
         query.edit_message_text(text, parse_mode=ParseMode.HTML)
         query.edit_message_reply_markup(markup)
-        group.message = query.message
-        utils.dump_pkl('newgroup', group)
+        botupdate.message = query.message
+        utils.dump_pkl('newgroup', botupdate)
         return ONBOARDING
     except:
         print("BOT: User sent messages")
@@ -290,9 +295,9 @@ def purpose(update, context):
         # SET NEW TEXT AND MARKAP FOR PURPOSE REQUEST
         text = "Great! Last step!\nPlease reply to this message with a description of who is allowed access to this group and how can activists join this group. You can skip this step as well with the button below."
         markup = create_menu(["Skip"], ["skip"])
-        group.message.edit_text(
+        botupdate.message.edit_text(
             text=text, parse_mode=ParseMode.HTML, reply_markup=markup)
-        utils.dump_pkl('newgroup', group)
+        utils.dump_pkl('newgroup', botupdate)
         return ONBOARDING
 
 
@@ -309,12 +314,13 @@ def onboarding(update, context):
         user_id = update.callback_query.from_user.id
         chat_id = update.effective_chat.id
 
-    if utils.load_pkl('newgroup', chat_id, user_id) == "":
+    if utils.load_pkl('newgroup', chat_id, user_id) == None:
         print("TELEBOT: ERROR - Persistence file not found")
         return REGION
 
     # LOAD PERSISTENCE FILE
-    group = utils.load_pkl('newgroup', chat_id, user_id)
+    botupdate = utils.load_pkl('newgroup', chat_id, user_id)
+    group = botupdate.obj
     print('TELEBOT: onboarding(): Is Subgroup: ',
           group.is_subgroup, ' ', type(group.is_subgroup))
     if user_id != group.activator_id:
@@ -322,27 +328,28 @@ def onboarding(update, context):
 
     try:
         group.onboarding = update.message.text
-        group.message.delete()
-        group.message = update.message.reply_text(
+        botupdate.message.delete()
+        botupdate.message = update.message.reply_text(
             'Alright, this group is being registered... this might take a minute...')
-        save_group_info(update.message.chat, group)
-        group.message.delete()
+        save_group_info(update.message.chat, botupdate)
+        botupdate.message.delete()
         return ConversationHandler.END
     except:
         query = update.callback_query
         query.answer()
         query.edit_message_text(
             'Alright, this group is being registered... this might take a minute...')
-        save_group_info(group.message.chat, group)
+        save_group_info(botupdate.message.chat, botupdate)
         query.message.delete()
         return ConversationHandler.END
 
 
-def save_group_info(chat, group):
+def save_group_info(chat, botupdate):
     # GROUP SAVING: Chat id, Title, Admins, Category, Region, Restrictions, is_subgroup,  parentgroup, purpose, onboarding
     print("SAVE GROUP INFO -----------------------------")
+    group = botupdate.obj
     group.date = datetime.utcnow()
-    card_url = interface.save_group(group)
+    card_url = interface.save_group(botupdate)
     if card_url == -1:
         chat.send_message(
             text="There was a problem in adding the call to the database.\nPlease contact @davidwickerhf for technical support.")
@@ -353,7 +360,7 @@ def save_group_info(chat, group):
     reply_markup = InlineKeyboardMarkup(keyboard)
     print("BOT - Save Group Info: Made Kayboard")
 
-    info_text = format_group_info(group)
+    info_text = format_group_info(botupdate)
     utils.delete_pkl('newgroup', group.id, group.activator_id)
     chat.send_message(
         text=info_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)

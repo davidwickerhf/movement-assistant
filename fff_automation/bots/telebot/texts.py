@@ -22,7 +22,7 @@ send_issue_input = "Reply to this message describing the issye you have encounte
 cancel_feedback_text = "<b>FEEDBACK INPUT CANCELLED</b>\nNo feedback has been sent"
 
 # EDIT GROUP CONVERSATION TEXT
-no_permission_edit_group = '<b>This group has not been activated yet</b> Before editing this group\'s info, please activate it using /activate'
+no_permission_edit_group = '<b>This group has not been activated yet</b> \nBefore editing this group\'s info, please activate it using /activate'
 edit_category_text = 'Select below the new <b>category</b> for this group:'
 edit_restriction_text = 'Select below the new <b>restriction</b> for this group:'
 edit_region_text = 'Select below the correct <b>region</b> this group concerns:'
@@ -35,3 +35,10 @@ no_parents_edit_parent = 'Cannot add a parent group to this group as no other gr
 editing_group_text = 'Editing group\'s information... This might take a while'
 edited_group_text = 'This group\'s information has been updated:'
 cancel_edit_group_text = '<b>GROUP EDIT CANCELLED</b>\nThe group hasn\'t been edited'
+
+# GROUP INFO COMMAND TEXTS
+group_info_text = '<b>{}</b>\'s information:'
+chat_not_registerred_info = 'This chat is not registered yet. To activate this group chat, use the command /activate'
+
+# WEB OF TRUST TEXTS
+no_access_group_info_text = 'Sorry, you don\' have access to Fridays For Future\'s web of trust yet'

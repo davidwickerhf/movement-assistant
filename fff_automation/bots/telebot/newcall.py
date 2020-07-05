@@ -6,13 +6,9 @@ from fff_automation.bots.telebot import *
 @send_typing_action
 def new_call(update, context):
     message = update.message
-    message_id = message.message_id
     groupchat = update.message.chat
     user = message.from_user
-    user_id = user.id
     chat_id = groupchat.id
-    message_id = message.message_id
-    name = user.name
 
     print("Got chat id")
 
@@ -37,32 +33,32 @@ def new_call(update, context):
         command = message_text[:message_text.find(' ') + 1]
         print(command)
         # ALGORITHM IS NOT WORKING - AND IS SLOW
-        propcall = Call(chat_id=chat_id, user_id=user_id,
-                        message_id=message_id, name=name, message=message)
+        propcall = Call(chat_id=chat_id, activator_id=user.id)
         call = utils.format_string(message_text, command, propcall)
+        botupdate = BotUpdate(obj=call, update=update, user=update.effective_user)
 
         # ARGUMENTS FORMAT: TITLE, DATE, TIME, DURATION, DESCRIPTION, AGENDA LINK, LINK
         print("GET ARGUMENTS")
         if call.title == '':
             print("Requesting Title input")
             # SEND MESSAGE
-            format_input_argument(update, 0, call.TITLE, call)
+            format_input_argument(update, 0, call.TITLE, botupdate)
             return ADD_TITLE
         elif call.date == '':
             print("Title is not missing - Requesting Date input")
             # SEND MESSAGE
-            format_input_argument(update, 0, call.DATE, call)
+            format_input_argument(update, 0, call.DATE, botupdate)
             return ADD_DATE
         elif call.time == '':
             print("Date is not missing - Requesting Time input")
             # SEND MESSAGE
-            format_input_argument(update, 0, call.TIME, call)
+            format_input_argument(update, 0, call.TIME, botupdate)
             return ADD_TIME
 
         print("Not returned get arguments -> ALL necessary arguments are alraedy given")
         # SAVE CALL TO DATABASE
 
-        save_call_info(update, context, call)
+        save_call_info(update, context, botupdate)
         return ConversationHandler.END
 
 
@@ -81,23 +77,23 @@ def add_title(update, context):
     # GET CALL SAVED IN PERSISTANCE FILE
     chat_id = update.effective_chat.id
     user_id = update.message.from_user.id
-    call = utils.load_pkl('newcall', chat_id, user_id)
-    if call == "" or user_id != call.user_id:
+    botupdate = utils.load_pkl('newcall', chat_id, user_id)
+    if botupdate == None:
         return ADD_TITLE
-
+    call = botupdate.obj
     call.title = update.message.text
 
     # Request Call Date Input
     if call.date == '':
-        format_input_argument(update, 1, call.DATE, call)
+        format_input_argument(update, 1, call.DATE, botupdate)
         return ADD_DATE
     elif call.time == '':
-        format_input_argument(update, 1, call.TIME, call)
+        format_input_argument(update, 1, call.TIME, botupdate)
         return ADD_TIME
     else:
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
-        save_call_info(update, context, call)
+        save_call_info(update, context, botupdate)
         return ConversationHandler.END
 
 
@@ -107,11 +103,11 @@ def add_date(update, context):
     # GET CALL SAVED IN PERSISTANCE FILE
     chat_id = update.effective_chat.id
     user_id = update.message.from_user.id
-    call = utils.load_pkl('newcall', chat_id, user_id)
-    if call == "" or user_id != call.user_id:
+    botupdate = utils.load_pkl('newcall', chat_id, user_id)
+    if botupdate == None:
         # USER DID NOT START CONVERSATION
         return ADD_DATE
-
+    call = botupdate.obj
     print("ADD CALL DATE")
     print("Requesting user input")
     date_text = update.message.text
@@ -132,30 +128,30 @@ def add_date(update, context):
                 "Cancel", callback_data="cancel")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
-            call.message.delete()
-            call.message = update.message.reply_text(
+            botupdate.message.delete()
+            botupdate.message = update.message.reply_text(
                 text=past_date_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
-            utils.dump_pkl('newcall', call)
+            utils.dump_pkl('newcall', botupdate)
             return ADD_DATE
     else:
         # INPUT IS INCORRECT
         keyboard = [[InlineKeyboardButton("Cancel", callback_data="cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        call.message.delete()
-        call.message = update.message.reply_text(
+        botupdate.message.delete()
+        botupdate.message = update.message.reply_text(
             text=wrong_date_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
-        utils.dump_pkl('newcall', call)
+        utils.dump_pkl('newcall', botupdate)
         return ADD_DATE
 
     if call.time == '':
-        format_input_argument(update, 1, call.TIME, call)
+        format_input_argument(update, 1, call.TIME, botupdate)
         print("Going to next step")
         return ADD_TIME
     else:
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
-        save_call_info(update, context, call)
+        save_call_info(update, context, botupdate)
         return ConversationHandler.END
 
 
@@ -165,10 +161,10 @@ def add_time(update, context):
     # GET CALL SAVED IN PERSISTANCE FILE
     chat_id = update.effective_chat.id
     user_id = update.message.from_user.id
-    call = utils.load_pkl('newcall', chat_id, user_id)
-    if call == "" or user_id != call.user_id:
+    botupdate = utils.load_pkl('newcall', chat_id, user_id)
+    if botupdate == None:
         return ADD_TIME
-
+    call = botupdate.obj
     print("ADD TIME")
     print("Requesting user input")
     message_text = update.message.text
@@ -189,24 +185,26 @@ def add_time(update, context):
                     "Cancel", callback_data="cancel")]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
 
-                call.message.delete()
-                call.message = update.message.reply_text(
+                botupdate.message.delete()
+                botupdate.message = update.message.reply_text(
                     text=past_time_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
-                utils.dump_pkl('newcall', call)
+                utils.dump_pkl('newcall', botupdate)
                 return ADD_TIME
+        else:
+            call.time = time
         print("Inputted time: ", str(call.time))
         print("CONVERSATION END - send call details")
         # SAVE INFO IN DATABASE
-        save_call_info(update, context, call)
+        save_call_info(update, context, botupdate)
         return ConversationHandler.END
     else:
         # INPUT IS INCORRECT
         keyboard = [[InlineKeyboardButton("Cancel", callback_data="cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        call.message.delete()
-        call.message = update.message.reply_text(
+        botupdate.message.delete()
+        botupdate.message = update.message.reply_text(
             text=wrong_time_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
-        utils.dump_pkl('newcall', call)
+        utils.dump_pkl('newcall', botupdate)
         return ADD_TIME
 
 
@@ -216,63 +214,61 @@ def cancel_call(update, context):
     # GET CALL SAVED IN PERSISTANCE FILE
     chat_id = update.effective_chat.id
     user_id = update.callback_query.from_user.id
-    call = utils.load_pkl('newcall', chat_id, user_id)
+    botupdate = utils.load_pkl('newcall', chat_id, user_id)
     update.callback_query.answer()
-    if call == "" or user_id != call.user_id:
+    if botupdate == None:
         return
     else:
         print("CANCEL PRESSED")
-        call.message.edit_text(
+        botupdate.message.edit_text(
             text=cancel_add_call_text, parse_mode=ParseMode.HTML)
         utils.delete_pkl('newcall', chat_id, user_id)
     return ConversationHandler.END
 
 
-def format_input_argument(update, state, key, call):
+def format_input_argument(update, state, key, botupdate):
     keyboard = [[InlineKeyboardButton(
         "Cancel", callback_data="cancel")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    call = botupdate.obj
     argument_title = call.order.get(key)
 
     if state == 0:
         print("SEND FIRST GET ARGUMENTS MESSAGE")
         # Code runs for the first time -> Send message
-        call.message = update.message.reply_text(text=text_input_argument.format(
+        botupdate.message = update.message.reply_text(text=text_input_argument.format(
             argument_title.upper(), argument_title), parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     else:
         # Code already run -> edit message
-        call.message.delete()
-        call.message = update.message.reply_text(text=text_input_argument.format(
+        botupdate.message.delete()
+        botupdate.message = update.message.reply_text(text=text_input_argument.format(
             argument_title.upper(), argument_title), parse_mode=ParseMode.HTML, reply_markup=reply_markup)
         print("EDIT GET ARGUMENTS MESSAGE")
-    utils.dump_pkl('newcall', call)
+    utils.dump_pkl('newcall', botupdate)
 
 
 @send_typing_action
-def save_call_info(update, context, call):
-    call.message.delete()
-    message = update.message.chat.send_message(
+def save_call_info(update, context, botupdate):
+    botupdate.message.delete()
+    botupdate.message = update.message.chat.send_message(
         text="Saving call information... This might take a minute...")
-    call.name = update.effective_chat.get_member(call.user_id).user.name
-    values = interface.save_call(call)
-    if values == -1:
-        message.edit_text(
+    interface.save_call(botupdate)
+    call = botupdate.obj
+    if botupdate == None:
+        botupdate.message.edit_text(
             text="There was a problem in adding the call to the database.\nPlease contact @davidwickerhf for technical support.")
         return ConversationHandler.END
 
-    calendar_url = values[0]
-    trello_url = values[1]
-
     keyboard = [[InlineKeyboardButton("Calendar", url=str(
-        calendar_url)), InlineKeyboardButton("Trello Card", url=str(trello_url))]]
+        botupdate.obj.calendar_url)), InlineKeyboardButton("Trello Card", url=str(botupdate.card_url))]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     print("Made Kayboard")
 
     text = utils.format_call_info("save_call", call)
     print("Formatted text")
-    utils.delete_pkl('newcall', call.chat_id, call.user_id)
+    utils.delete_pkl('newcall', call.chat_id, botupdate.user.id)
 
-    message.delete()
+    botupdate.message.delete()
     update.message.reply_text(
         text=text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     print("Sent Reply")

@@ -149,7 +149,8 @@ def getKeysByValue(dictOfElements, valueToFind):
     return listOfKeys
 
 
-def dump_pkl(method, obj):
+def dump_pkl(method, botupdate):
+    obj = botupdate.obj
     if isinstance(obj, Group):
         chat_id = obj.id
     else:
@@ -158,7 +159,7 @@ def dump_pkl(method, obj):
     if not os.path.exists(path):
         os.makedirs(path)
     joblib.dump(
-        obj, "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, chat_id, obj.user_id))
+        botupdate, "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, chat_id, botupdate.user.id))
 
 
 def load_pkl(method, chat_id, user_id):
@@ -167,7 +168,7 @@ def load_pkl(method, chat_id, user_id):
             "fff_automation/bots/persistence/{}_{}_{}.pkl".format(method, chat_id, user_id))
         return obj
     except:
-        return ""
+        return None
 
 
 def delete_pkl(method, chat_id, user_id):

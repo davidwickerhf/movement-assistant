@@ -248,7 +248,7 @@ def set_database(users=None, groups=None, calls=None):
             agenda_link text,
             calendar_url text NOT NULL,
             link text,
-            user_id text NOT NULL,
+            activator_id text NOT NULL,
             status integer NOT NULL
             )""")
     if not users:

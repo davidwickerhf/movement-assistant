@@ -24,6 +24,7 @@ from fff_automation.modules import utils
 from fff_automation.modules import database
 from fff_automation.classes.group import Group
 from fff_automation.classes.call import Call
+from fff_automation.classes.botupdate import BotUpdate
 from fff_automation.classes.feedback import Feedback
 from fff_automation.bots.telebot.texts import *
 
@@ -48,14 +49,15 @@ def send_typing_action(func):
 
 
 ####################### GROUP UTILS ----------------------------------------
-def subgroup_menu(group, direction, size=4, method='newgroup'):
+def subgroup_menu(botupdate: BotUpdate, direction, size=4, method='newgroup'):
+    group = botupdate.obj
     values = interface.rotate_groups(
-        first_index=group.pgroup_last_index, direction=direction, size=size)
+        first_index=botupdate.pobj_last_index, direction=direction, size=size)
     print("TELEBOT: Rotated Groups: ", values)
     rotated_groups = values[0]
     print("Check 1 ", rotated_groups)
-    group.pgroup_last_index = values[1]
-    utils.dump_pkl(method, group)
+    botupdate.pobj_last_index = values[1]
+    utils.dump_pkl(method, botupdate)
     children_ids = []
     for child in group.children:
         if child != None:
@@ -83,7 +85,8 @@ def subgroup_menu(group, direction, size=4, method='newgroup'):
     return markup
 
 
-def format_group_info(group, type=0, error_text=''):
+def format_group_info(botupdate, type=0, error_text=''):
+    group = botupdate.obj
     print('TELEBOT: format_group_info()')
     if type == 0:
         text = '<b>{}</b> has been saved in the database!'.format(group.title)
@@ -91,6 +94,8 @@ def format_group_info(group, type=0, error_text=''):
         text = edited_group_text
     elif type == 2:
         text = error_text
+    elif type == 3:
+        text = group_info_text.format(group.title)
     text = text +  '''\n<b>Category:</b> {}\n<b>Restriction:</b> {}\n<b>Region:</b> {}\n<b>Color:</b> {}\n<b>Purpose:</b> {}\n<b>Onboarding:</b> {}'''.format(
         group.category, group.restriction, group.region, group.get_color(), group.purpose, group.onboarding)
     if group.is_subgroup:
@@ -99,6 +104,12 @@ def format_group_info(group, type=0, error_text=''):
                 database.get_group_title(group.parentgroup))
     return text
 
+
+def format_group_buttons(group):
+    card_url = 'https://trello.com/c/{}'.format(group.card_id)
+    keyboard = [[InlineKeyboardButton("Trello Card", url=str(card_url)), InlineKeyboardButton("Edit Info", callback_data='edit_group')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    return markup
     
 ################################### UTIlS ############
 def create_menu(button_titles, callbacks, cols=1):

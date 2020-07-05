@@ -1,7 +1,7 @@
-from fff_automation.bots.telebot import *
 from fff_automation.bots.telebot.activate import *
 from fff_automation.bots.telebot.editgroup import *
 from fff_automation.bots.telebot.deletegroup import *
+from fff_automation.bots.telebot.groupinfo import *
 from fff_automation.bots.telebot.newcall import *
 from fff_automation.bots.telebot.feedback import *
 from fff_automation.bots.telebot.help import *
@@ -16,6 +16,7 @@ def setup(token):
 
     # Commands
     dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler('groupinfo', group_info))
     group_handler = ConversationHandler(
         entry_points=[CommandHandler("activate", save_group)],
         states={
@@ -71,11 +72,11 @@ def setup(token):
         conversation_timeout=timedelta(seconds=240),
     )
     feedback_handler = ConversationHandler(
-        entry_points=[CommandHandler('feedback', feedback)],
+        entry_points=[CommandHandler('feedback', register_feedback)],
         states={
             FEEDBACK_TYPE: [CallbackQueryHandler(feedback_type)],
             ISSUE_TYPE: [CallbackQueryHandler(issue_type)],
-            INPUT_FEEDBACK: [MessageHandler(Filters.text, input_feedback)]
+            INPUT_FEEDBACK: [MessageHandler(Filters.text, callback=input_feedback)]
         },
         fallbacks=[CallbackQueryHandler(
             cancel_feedback, pattern='cancel_feedback')],

@@ -53,8 +53,9 @@ def log(timestamp, user_id, action, group_name, item=''):
     logs.append_row([timestamp, user_id, action, group_name, item])
 
 
-def save_group(group):
+def save_group(botupdate):
     # SAVE GROUP IN DATABASE
+    group = botupdate.obj
     parent_title = ''
     if group.is_subgroup:
         parent_title = database.get(group.parentgroup)[0].title
@@ -62,10 +63,11 @@ def save_group(group):
     groupchats.append_row([group.key, group.title, group.category, group.region, group.restriction,
                            group.admin_string, group.platform, parent_title, group.purpose, group.onboarding, str(group.date), group.activator_name])
     # LOG
-    log(str(group.date), group.user_id, 'ACTIVATE GROUP', group.title)
+    log(str(group.date), botupdate.user.id, 'ACTIVATE GROUP', group.title)
 
 
-def edit_group(group):
+def edit_group(botupdate):
+    group = botupdate.obj
     old_row = find_row_by_id(item_id=group.key)[0]
     groupchats.delete_row(old_row)
     parent_title = ''
@@ -76,7 +78,7 @@ def edit_group(group):
     groupchats.append_row([group.key, group.title, group.category, group.region, group.restriction,
                            group.admin_string, group.platform, parent_title, group.purpose, group.onboarding, str(group.date), group.activator_name])
     # LOG
-    log(str(group.date), group.user_id, 'EDIT_GROUP', group.title)
+    log(str(group.date), botupdate.user.id, 'EDIT_GROUP', group.title)
 
 
 def archive_group(chat_id, username):
@@ -88,7 +90,8 @@ def archive_group(chat_id, username):
     # function is not complete
 
 
-def delete_group(group):
+def delete_group(botupdate):
+    group = botupdate.obj
     # DELETE CHILDREN LINKS IN DATABASE
     if group.children[0] != None:
         for child in group.children:
@@ -99,23 +102,25 @@ def delete_group(group):
 
     # REMOVE ROW FROM GROUPS SHEET
     print('SHEET: Group Key: ', group.key)
-    groupchats.delete_row(find_row_by_id(item_id=group.key)[0])
+    try: groupchats.delete_row(find_row_by_id(item_id=group.key)[0])
+    except: pass
 
     # REMOVE CALLS
     for call in group.calls:
         delete_call(call)
 
     # LOG
-    log(str(utils.now_time()), group.user_id, 'DELETE GROUP', group.title)
+    log(str(utils.now_time()), botupdate.user.id, 'DELETE GROUP', group.title)
 
 
-def save_call(call):
+def save_call(botupdate):
     # SAVE IN SHEET
+    call = botupdate.obj
     calls.append_row([call.key, database.get_group_title(call.chat_id), call.title, str(call.date), str(
-        call.time), call.duration_string, call.description, call.agenda_link, call.calendar_url, call.card_url, call.name])
+        call.time), call.duration_string, call.description, call.agenda_link, call.calendar_url, botupdate.card_url, botupdate.user.name])
 
     # LOG
-    log(str(utils.now_time()), call.user_id, 'NEW CALL',
+    log(str(utils.now_time()), botupdate.update.effective_chat.id, 'NEW CALL',
         database.get_group_title(call.chat_id), call.title)
 
 

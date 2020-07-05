@@ -3,7 +3,7 @@ from fff_automation.bots.telebot import *
 
 ######################### FEEDBACK CONVERSATION FUNCTIONS ###############
 @run_async
-def feedback(update, context):
+def register_feedback(update, context):
     print("TELEBOT: feedback()")
     # Create Feedback Type Menu & Message Text
     markup = create_menu([
@@ -26,13 +26,14 @@ def feedback(update, context):
         chat_id=update.effective_chat.id,
         date=utils.now_time()
     )
+    botupdate = BotUpdate(obj=feedback, update=update, user=update.effective_user)
 
     # Send Message
-    feedback.message = update.message.chat.send_message(
+    botupdate.message = update.message.chat.send_message(
         text=select_feedback_type, parse_mode=ParseMode.HTML, reply_markup=markup)
 
     # Save feedback obj in pickle
-    utils.dump_pkl('feedback', feedback)
+    utils.dump_pkl('feedback', botupdate)
     return FEEDBACK_TYPE
 
 
@@ -42,12 +43,12 @@ def feedback_type(update, context):
     # Retrieve Feedback Obj from pickle
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    feedback = utils.load_pkl('feedback', chat_id, user_id)
-
-    if feedback == '' or user_id != feedback.user_id:
+    botupdate = utils.load_pkl('feedback', chat_id, user_id)
+    
+    if botupdate == None:
         print('TELEBOT: feedback_type: Wrong User')
         return FEEDBACK_TYPE
-
+    feedback = botupdate.obj
     # Check if callback-query is 'cancel_feedback'
     if update.callback_query.data == 'cancel_feedback':
         cancel_feedback(update, context)
@@ -89,9 +90,9 @@ def feedback_type(update, context):
         update.callback_query.edit_message_text(
             select_issue_type, parse_mode=ParseMode.HTML)
         update.callback_query.edit_message_reply_markup(markup)
-        feedback.message = update.callback_query.message
+        botupdate.message = update.callback_query.message
         # Save feedback obj in pickle
-        utils.dump_pkl('feedback', feedback)
+        utils.dump_pkl('feedback', botupdate)
         return ISSUE_TYPE
     else:
         # TYPE IS EITHER QUESTION, FEEDBACK OR FEATURE REQUEST
@@ -100,9 +101,9 @@ def feedback_type(update, context):
         markup = create_menu('Canel', 'cancel_feedback')
         update.callback_query.edit_message_text(send_feedback_input.format(
             interface.githubc.label_keys.get(feedback.type)), parse_mode=ParseMode.HTML)
-        feedback.message = update.callback_query.message
+        botupdate.message = update.callback_query.message
         # Save feedback obj in pickle
-        utils.dump_pkl('feedback', feedback)
+        utils.dump_pkl('feedback', botupdate)
         return INPUT_FEEDBACK
 
 
@@ -112,12 +113,12 @@ def issue_type(update, context):
     # Retrieve feedback obj from pickle
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    feedback = utils.load_pkl('feedback', chat_id, user_id)
+    botupdate = utils.load_pkl('feedback', chat_id, user_id)
     print('TELEBOT: issue_type')
 
-    if feedback == '' or user_id != feedback.user_id:
+    if botupdate == None:
         return ISSUE_TYPE
-
+    feedback = botupdate.obj
     # Check if callback-query is 'cancel_feedback'
     if update.callback_query.data == 'cancel_feedback':
         cancel_feedback(update, context)
@@ -127,13 +128,13 @@ def issue_type(update, context):
     feedback.issue_type = int(update.callback_query.data)
 
     # Send message requesting issue description
-    markup = create_menu('Canel', 'cancel_feedback')
+    markup = create_menu(['Canel'], ['cancel_feedback'])
     update.callback_query.edit_message_text(send_issue_input.format(
         interface.githubc.label_keys.get(feedback.type)), parse_mode=ParseMode.HTML)
     update.callback_query.edit_message_reply_markup(markup)
-    feedback.message = update.callback_query.message
+    botupdate.message = update.callback_query.message
     # Save feedback obj in pickle
-    utils.dump_pkl('feedback', feedback)
+    utils.dump_pkl('feedback', botupdate)
     return INPUT_FEEDBACK
 
 
@@ -143,14 +144,14 @@ def input_feedback(update, context):
     print('TELEBOT: issue_type()')
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    feedback = utils.load_pkl('feedback', chat_id, user_id)
+    botupdate = utils.load_pkl('feedback', chat_id, user_id)
 
-    if feedback == '' or user_id != feedback.user_id:
+    if botupdate == None:
         return INPUT_FEEDBACK
-
+    feedback = botupdate.obj
     # Processing Message
-    feedback.message.delete()
-    feedback.message = update.message.reply_text('Processing...')
+    botupdate.message.delete()
+    botupdate.message = update.message.reply_text('Processing...')
 
     # Save issue
     message_text = save_feedback(feedback, update)
@@ -162,7 +163,7 @@ def input_feedback(update, context):
                                  parse_mode=ParseMode.HTML)
 
     # Send confirm message in chat
-    feedback.message.delete()
+    botupdate.message.delete()
     text = '{} thank you for your feedback! Your input has been sent to my developers'.format(
         update.effective_user.name)
     update.effective_chat.send_message(text, parse_mode=ParseMode.HTML)
@@ -220,13 +221,13 @@ def cancel_feedback(update, context):
     # GET CALL SAVED IN PERSISTANCE FILE
     chat_id = update.effective_chat.id
     user_id = update.callback_query.from_user.id
-    feedback = utils.load_pkl('feedback', chat_id, user_id)
+    botupdate = utils.load_pkl('feedback', chat_id, user_id)
     update.callback_query.answer()
-    if feedback == "" or user_id != feedback.user_id:
+    if botupdate == None:
         return
     else:
         print("CANCEL PRESSED")
-        feedback.message.edit_text(
+        botupdate.message.edit_text(
             text=cancel_feedback_text, parse_mode=ParseMode.HTML)
         utils.delete_pkl('feedback', chat_id, user_id)
     return ConversationHandler.END
