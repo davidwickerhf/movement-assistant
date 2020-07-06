@@ -19,7 +19,6 @@ import pickle
 import pytz
 
 from fff_automation.modules import settings, utils, database, interface
-from fff_automation.modules.settings import CALL_DETAILS, EDIT_CALL, EDIT_ARGUMENT, ADD_TITLE, ADD_DATE, ADD_TIME, GROUP_INFO, EDIT_GROUP, ARGUMENT, INPUT_ARGUMENT, EDIT_IS_SUBGROUP, EDIT_PARENT, CATEGORY, REGION, RESTRICTION, IS_SUBGROUP, PARENT_GROUP, PURPOSE, ONBOARDING, COLOR, CANCEL_DELETE_GROUP, CONFIRM_DELETE_GROUP, DOUBLE_CONFIRM_DELETE_GROUP, FEEDBACK_TYPE, ISSUE_TYPE, INPUT_FEEDBACK
 from fff_automation.modules import utils
 from fff_automation.modules import database
 from fff_automation.classes.group import Group
@@ -27,6 +26,7 @@ from fff_automation.classes.call import Call
 from fff_automation.classes.botupdate import BotUpdate
 from fff_automation.classes.feedback import Feedback
 from fff_automation.bots.telebot.texts import *
+from fff_automation.modules.settings import *
 
 
 logging.basicConfig(
@@ -50,8 +50,8 @@ def send_typing_action(func):
 
 ####################### GROUP UTILS ----------------------------------------
 def subgroup_menu(botupdate: BotUpdate, direction, size=4, method='newgroup'):
-    group = botupdate.obj
-    values = interface.rotate_groups(
+    obj = botupdate.obj
+    values = interface.rotate_objs(
         first_index=botupdate.pobj_last_index, direction=direction, size=size)
     print("TELEBOT: Rotated Groups: ", values)
     rotated_groups = values[0]
@@ -59,12 +59,12 @@ def subgroup_menu(botupdate: BotUpdate, direction, size=4, method='newgroup'):
     botupdate.pobj_last_index = values[1]
     utils.dump_pkl(method, botupdate)
     children_ids = []
-    for child in group.children:
+    for child in obj.children:
         if child != None:
             children_ids.append(child.id)
     keyboard = []
     for pgroup in rotated_groups:
-        if pgroup.id != group.id and pgroup.id not in children_ids:
+        if pgroup.id != obj.id and pgroup.id not in children_ids:
             row = []
             group_id = pgroup.id
             print("TELEBOT: subgroup_menu(): Group Id: ", group_id)
@@ -76,11 +76,39 @@ def subgroup_menu(botupdate: BotUpdate, direction, size=4, method='newgroup'):
     if method == 'newgroup':
         keyboard.append([InlineKeyboardButton('No Parent Group', callback_data='no_parent')])
 
-    keyboard.append([InlineKeyboardButton(text="<=", callback_data=0),
-                     InlineKeyboardButton(text="=>", callback_data=1)])
+    keyboard.append([InlineKeyboardButton(text="<=", callback_data=LEFT),
+                     InlineKeyboardButton(text="=>", callback_data=RIGHT)])
     
     if method == 'edit_group':
         keyboard.append([InlineKeyboardButton('Cancel', callback_data='cancel')])
+    markup = InlineKeyboardMarkup(keyboard)
+    return markup
+
+
+def rotate_calls(botupdate: BotUpdate, direction):
+    if botupdate.obj_selection == GROUP_CALLS:
+        id = botupdate.update.effective_chat.id
+    else:
+        id = ''
+    values = interface.rotate_objs(
+        first_index=botupdate.pobj_last_index,
+        direction=direction,
+        id=id,
+        table='calls',
+        field='chat_id'
+    )
+    rotated_objs = values[0]
+    botupdate.pobj_last_index = values[1]
+    keyboard = []
+    for obj in rotated_objs:
+        row = []
+        print("TELEBOT: subgroup_menu(): Group Id: ", obj.id)
+        button = InlineKeyboardButton(text=obj.title, callback_data=obj.id)
+        row.append(button)
+        keyboard.append(row)
+
+    keyboard.append([InlineKeyboardButton(text="<=", callback_data=LEFT),
+                     InlineKeyboardButton(text="=>", callback_data=RIGHT)])
     markup = InlineKeyboardMarkup(keyboard)
     return markup
 

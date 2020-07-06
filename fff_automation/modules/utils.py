@@ -63,6 +63,8 @@ def format_call_info(context, call):
         header = "<b>NEW CALL SCHEDULED</b>\n"
     elif context == "update_call":
         header = "<b>CALL DETAILS UPDATED</b>\n"
+    else:
+        header = ''
 
     print("UTILS: Duration type: ", type(call.duration))
     seconds = int(call.duration)
@@ -153,8 +155,10 @@ def dump_pkl(method, botupdate):
     obj = botupdate.obj
     if isinstance(obj, Group):
         chat_id = obj.id
-    else:
+    elif isinstance(obj, Call):
         chat_id = obj.chat_id
+    else:
+        chat_id = botupdate.update.effective_chat.id
     path = r'fff_automation\bots\persistence'
     if not os.path.exists(path):
         os.makedirs(path)

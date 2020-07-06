@@ -196,33 +196,33 @@ def save_call(botupdate):
     return botupdate
 
 
-def rotate_groups(first_index, direction, size=5):
-    groups = database.get()
-    print("DATABASE: rotate_groups(): Groups: ", groups)
-    if len(groups) <= size:
-        return [groups, first_index]
+def rotate_objs(first_index, direction, size=5, id='', table='groups', field='id'):
+    objects = database.get(item_id=id, table=table, field=field)
+    print("DATABASE: rotate_groups(): Groups: ", objects)
+    if len(objects) <= size:
+        return [objects, first_index]
 
-    if direction == 0:
+    if direction == settings.LEFT:
 
-        final_index = (first_index - size) % len(groups)
+        final_index = (first_index - size) % len(objects)
         if final_index < first_index:
-            rotated_groups = groups[final_index:first_index]
+            rotated_objs = objects[final_index:first_index]
         else:
-            rotated_groups = groups[:first_index] + groups[final_index:]
+            rotated_objs = objects[:first_index] + objects[final_index:]
             final_index = 0
 
-    elif direction == 1:
+    elif direction == settings.RIGHT:
 
-        final_index = (first_index + size) % len(groups)
+        final_index = (first_index + size) % len(objects)
         if final_index < first_index:
-            rotated_groups = groups[first_index - 1:final_index]
+            rotated_objs = objects[first_index - 1:final_index]
         else:
-            rotated_groups = groups[final_index - 1:] + groups[:first_index]
+            rotated_objs = objects[final_index - 1:] + objects[:first_index]
             final_index = 0
 
-    print("DATABASE - Rotate Groups: ", rotated_groups,
+    print("DATABASE - Rotate Groups: ", rotated_objs,
           " | Final Index: ", final_index)
-    return [rotated_groups, final_index]
+    return [rotated_objs, final_index]
 
 
 def feedback(feedback):

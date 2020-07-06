@@ -187,7 +187,7 @@ def edit_is_subgroup(update, context):
             return ConversationHandler.END
 
         group.is_subgroup = True
-        markup = subgroup_menu(botupdate, 1, method='edit_group')
+        markup = subgroup_menu(botupdate, RIGHT, method='edit_group')
         query.edit_message_text(edit_parent_text)
         query.edit_message_reply_markup(markup)
         botupdate.message = query.message
@@ -229,7 +229,7 @@ def edit_parent(update, context):
         # Cancel Edit Group
         cancel_edit_group(update, context)
         return ConversationHandler.END
-    elif int(query.data) in (0, 1):
+    elif int(query.data) in (LEFT, RIGHT):
         markup = subgroup_menu(
             botupdate=botupdate, direction=query.data, method='edit_group')
         query.edit_message_reply_markup(markup)

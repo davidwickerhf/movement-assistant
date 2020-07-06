@@ -36,6 +36,11 @@ editing_group_text = 'Editing group\'s information... This might take a while'
 edited_group_text = 'This group\'s information has been updated:'
 cancel_edit_group_text = '<b>GROUP EDIT CANCELLED</b>\nThe group hasn\'t been edited'
 
+# CALLS CONVERSATION TEXT
+select_calls_group_text = 'Select below:'
+no_calls_text = 'No calls are available for this selection'
+select_call_text = 'Select a call below:'
+
 # GROUP INFO COMMAND TEXTS
 group_info_text = '<b>{}</b>\'s information:'
 chat_not_registerred_info = 'This chat is not registered yet. To activate this group chat, use the command /activate'

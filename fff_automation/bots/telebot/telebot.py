@@ -3,6 +3,7 @@ from fff_automation.bots.telebot.editgroup import *
 from fff_automation.bots.telebot.deletegroup import *
 from fff_automation.bots.telebot.groupinfo import *
 from fff_automation.bots.telebot.newcall import *
+from fff_automation.bots.telebot.calls import *
 from fff_automation.bots.telebot.feedback import *
 from fff_automation.bots.telebot.help import *
 
@@ -71,6 +72,14 @@ def setup(token):
         fallbacks=[CallbackQueryHandler(cancel_call)],
         conversation_timeout=timedelta(seconds=240),
     )
+    calls_handler = ConversationHandler(
+        entry_points=[CommandHandler('calls', get_calls)],
+        states={
+            CALLS_SELECTION: [CallbackQueryHandler(calls_selection)],
+            SELECT_CALL: [CallbackQueryHandler(select_call)]
+        },
+        fallbacks=[]
+    )
     feedback_handler = ConversationHandler(
         entry_points=[CommandHandler('feedback', register_feedback)],
         states={
@@ -86,6 +95,7 @@ def setup(token):
     dp.add_handler(edit_group_handler)
     dp.add_handler(delete_group_handler)
     dp.add_handler(call_handler)
+    dp.add_handler(calls_handler)
     dp.add_handler(feedback_handler)
     dp.add_error_handler(error)
 

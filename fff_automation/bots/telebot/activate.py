@@ -179,7 +179,7 @@ def is_subgroup(update, context):
             print("BOT: Groups found")
             text = "Alright, select below the parent group of this group chat:"
             markup = subgroup_menu(
-                botupdate=botupdate, direction=1)
+                botupdate=botupdate, direction=RIGHT)
             query.edit_message_text(text)
             query.edit_message_reply_markup(markup)
             botupdate.message = query.message
@@ -237,7 +237,7 @@ def parent_group(update, context):
         botupdate.message = query.message
         utils.dump_pkl('newgroup', botupdate)
         return PURPOSE
-    elif int(query.data) in (0, 1):
+    elif int(query.data) in (LEFT, RIGHT):
         markup = subgroup_menu(
             botupdate=botupdate, direction=query.data)
         query.edit_message_reply_markup(markup)
