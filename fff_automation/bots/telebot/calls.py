@@ -40,9 +40,10 @@ def calls_selection(update, context):
         calls = database.get(table=database.CALLS)
         botupdate.obj_selection = ALL_CALLS
     # OUT CALL CHOICE
-    if len(calls) < 1:
+    if len(calls) < 1 or calls[0] == None:
         text = no_calls_text
         botupdate.message.edit_text(text=text, parse_mode=ParseMode.HTML)
+        utils.delete_pkl('calls', chat_id, user_id)
         return ConversationHandler.END
     else:
         markup = rotate_calls(botupdate, RIGHT)
