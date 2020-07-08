@@ -1,3 +1,4 @@
+from movement_assistant.modules.gcalendar import edit_event
 import gspread
 import os
 import json
@@ -85,6 +86,10 @@ def edit_group(botupdate: BotUpdate):
     
     trelloc.edit_group(botupdate)
 
+    for event in database.get(table=database.CALLS, item_id=group.id, field='chat_id'):
+        print('INTERFACE: edit_group(): Edit Call in Calendar')
+        gcalendar.edit_event(BotUpdate(botupdate.update, botupdate.user, database.get(event.id, table=database.CALLS)[0]), botupdate)
+
     # EDIT SHEET
     sheet.edit_group(botupdate)
 
@@ -159,7 +164,7 @@ def save_call(botupdate: BotUpdate):
     call = botupdate.obj
     group_title = database.get_group_title(call.chat_id)
     group_color = database.get_group_color(call.chat_id)
-    values = gcalendar.add_event(
+    values = gcalendar.add_event(botupdate, 
         call.date, call.time, call.duration, call.title, call.description, group_title, group_color)
     print("Added call to calendar")
     event_id = values[0]
@@ -184,8 +189,6 @@ def save_call(botupdate: BotUpdate):
     # SAVE EVENT IN DATABASE
     # Save Variables in Call Obj
     call.id = event_id
-    call.date = date_string
-    call.time = time_string
     call.calendar_url = calendar_url
     botupdate.card_url = 'https://trello.com/c/{}'.format(call.card_id)
     database.commit_call(call)
@@ -197,8 +200,19 @@ def save_call(botupdate: BotUpdate):
 
 
 def edit_call(botupdate: BotUpdate):
+    # DURATION STRING
+    seconds = int(botupdate.obj.duration)
+    hours = seconds / 3600
+    rest = seconds % 3600
+    minutes = rest / 60
+    duration_string = str(hours) + " Hours, " + str(minutes) + " Minutes"
+    botupdate.obj.duration_string = duration_string
+
     # EDIT TRELLO CARD
     trelloc.edit_call(botupdate)
+
+    # EDIT CALENDAR EVENT
+    gcalendar.edit_event(botupdate)
 
     # EDIT INFO IN SPREADSHEET
     sheet.edit_call(botupdate)

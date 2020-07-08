@@ -33,8 +33,7 @@ def new_call(update, context):
         command = message_text[:message_text.find(' ') + 1]
         print(command)
         # ALGORITHM IS NOT WORKING - AND IS SLOW
-        propcall = Call(chat_id=chat_id, activator_id=user.id)
-        call = utils.format_string(message_text, command, propcall)
+        call = Call(chat_id=chat_id, activator_id=user.id)
         botupdate = BotUpdate(obj=call, update=update, user=update.effective_user)
 
         # ARGUMENTS FORMAT: TITLE, DATE, TIME, DURATION, DESCRIPTION, AGENDA LINK, LINK

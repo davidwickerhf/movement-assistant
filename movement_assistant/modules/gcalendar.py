@@ -4,24 +4,24 @@ import pickle
 import os
 import json
 from datetime import datetime, timedelta
-from movement_assistant.modules import utils, settings
+from movement_assistant.modules import utils, settings, database
+from movement_assistant.classes.botupdate import BotUpdate
 from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 from google.auth.transport.requests import Request
 
-LAVENDER, SAGE, GRAPE, FLAMINGO, BANANA, TANGERINE, PEACOCK, GRAPHITE, BLUEBERRY, BASIL = range(
-    10)
+LAVENDER, SAGE, GRAPE, FLAMINGO, BANANA, TANGERINE, PEACOCK, GRAPHITE, BLUEBERRY, BASIL = range(1, 11)
 colors = {
-    1: 'Lavender',
-    2: 'Sage',
-    3: 'Grape',
-    4: 'Flamingo',
-    5: 'Banana',
-    6: 'Tangerine',
-    7: 'Peacock',
-    8: 'Graphite',
-    9: 'Blueberry',
-    10: 'Basil'
+    LAVENDER: 'Lavender',
+    SAGE: 'Sage',
+    GRAPE: 'Grape',
+    FLAMINGO: 'Flamingo',
+    BANANA: 'Banana',
+    TANGERINE: 'Tangerine',
+    PEACOCK: 'Peacock',
+    GRAPHITE: 'Graphite',
+    BLUEBERRY: 'Blueberry',
+    BASIL: 'Basil'
 }
 
 if not (os.path.isfile('movement_assistant/secrets/calendar_token.pkl') and os.path.getsize('movement_assistant/secrets/calendar_token.pkl') > 0):
@@ -49,7 +49,7 @@ credentials = pickle.load(
 service = build('calendar', 'v3', credentials=credentials)
 
 
-def add_event(date, time, duration, title, description, group, color):
+def add_event(botupdate, date, time, duration, title, description, group, color):
     print("CALENDAR: Time type: ", type(time), ' ', time)
     print("CALENDAR: Date type: ", type(date), ' ', date)
 
@@ -78,7 +78,7 @@ def add_event(date, time, duration, title, description, group, color):
             'dateTime': end_time.strftime("%Y-%m-%dT%H:%M:%S"),
             'timeZone': GMT_OFF,
         },
-        'description': description,
+        'description': utils.format_call_info(botupdate, platform='Calendar'),
         'colorId': str(color),
     }
 
@@ -88,6 +88,35 @@ def add_event(date, time, duration, title, description, group, color):
     url = saved_event.get('htmlLink')
     event_id = saved_event['id']
     return [event_id, url]
+
+
+def edit_event(botupdate, gbotupdate=None):
+    calendar_id = settings.get_var(key='CALENDAR_ID', default='primary')
+    #try:
+
+    start_date = datetime.combine(botupdate.obj.date, botupdate.obj.time)
+    print("CALENDAR: Start time string: ", start_date)
+    print(type(start_date))
+    # Get end time calculating with the duration
+    print("CALENDAR: Duration string: ", botupdate.obj.duration)
+    duration = timedelta(seconds=int(botupdate.obj.duration))
+    print("CALENDAR: Duration: " + str(duration))
+    print("CALENDAR: type: ", type(duration))
+
+    end_time = start_date + duration
+    print("CALENDAR: End time: " + str(end_time))
+    print(type(end_time))
+
+    event = service.events().get(calendarId=calendar_id, eventId=botupdate.obj.id).execute()
+    event['summary'] = botupdate.obj.title
+    event['start']['dateTime'] = start_date.strftime("%Y-%m-%dT%H:%M:%S")
+    event['end']['dateTime'] = end_time.strftime("%Y-%m-%dT%H:%M:%S")
+    event['description'] = utils.format_call_info(botupdate, platform='Calendar')
+    color = gbotupdate.obj.color if gbotupdate else database.get(botupdate.obj.chat_id)[0].color
+    event['colorId'] = color
+
+    service.events().update(calendarId=calendar_id, eventId=event['id'], body=event).execute()
+
 
 
 def delete_event(event_id):

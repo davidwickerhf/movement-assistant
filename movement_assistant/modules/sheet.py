@@ -1,3 +1,4 @@
+from movement_assistant.classes.botupdate import BotUpdate
 import gspread
 import os
 import json
@@ -107,7 +108,7 @@ def delete_group(botupdate):
 
     # REMOVE CALLS
     for call in group.calls:
-        delete_call(call)
+        delete_call(BotUpdate(update=botupdate.update, user=botupdate.user, obj=call))
 
     # LOG
     log(str(utils.now_time()), botupdate.user.id, 'DELETE GROUP', group.title)
@@ -124,10 +125,11 @@ def save_call(botupdate):
         database.get_group_title(call.chat_id), call.title)
 
 
-def delete_call(call):
+def delete_call(botupdate: BotUpdate):
+    call = botupdate.obj
     call_row = find_row_by_id(sheet=calls, item_id=call.key)[0]
     calls.delete_row(call_row)
-    log(str(utils.now_time()), call.user_id, 'DELETE CALL',
+    log(str(utils.now_time()), botupdate.user.id, 'DELETE CALL',
         database.get_group_title(call.chat_id), call.title)
 
     

@@ -288,7 +288,7 @@ def input_edit_group_argument(update, context):
             interface.trelloc.regions, query.data)[0]
     elif botupdate.edit_argument == COLOR:
         print('TELEBOT: input_edit_group_argument(): Color')
-        group.color = query.data
+        group.color = int(query.data)
     elif botupdate.edit_argument == PURPOSE:
         print('TELEBOT: input_edit_group_argument(): Purpose')
         group.purpose = update.message.text

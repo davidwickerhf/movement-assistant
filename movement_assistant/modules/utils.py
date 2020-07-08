@@ -8,6 +8,7 @@ import joblib
 import dateparser
 import re
 import pytz
+from tzlocal import get_localzone
 from pytimeparse.timeparse import timeparse
 import random
 import os
@@ -58,6 +59,22 @@ def str2duration(string):
         return None
 
 
+def utc_to_timezone(unaware):
+    """Converts a given UTC datetime to the timezone in which the server running the code is located. This helps when interacting with third party like Trello.
+
+    :param unaware: Datetime to convert
+    :type unaware: datetime
+
+    :returns: Datetime in server's timezone
+    :rtype: datetime
+    """
+    start_tz = pytz.timezone('UTC')
+    aware = start_tz.localize(unaware)
+    target_tz = pytz.timezone('Europe/Berlin')
+    localized = target_tz.normalize(aware)
+    return localized
+
+
 def format_call_info(botupdate: BotUpdate, platform='Telegram', context=''):
     call = botupdate.obj
     if platform == 'Telegram':
@@ -80,7 +97,7 @@ def format_call_info(botupdate: BotUpdate, platform='Telegram', context=''):
             call.description = "N/A"
         if call.link == "":
             call.link = "N/A"
-        text = header + "Call details: \n\n- <b>Title:</b> {}\n- <b>Date:</b> {}\n- <b>Time (GMT):</b> {}\n- <b>Duration:</b> {}\n\n- <b>Description:</b> {}\n- <b>Agenda Link:</b> {}\n\n- <b>Call ID:</b> {}".format(
+        text = header + "Call details: \n\n- <b>Title:</b> {}\n- <b>Date:</b> {}\n- <b>Time (UTC):</b> {}\n- <b>Duration:</b> {}\n\n- <b>Description:</b> {}\n- <b>Agenda Link:</b> {}\n\n- <b>Call ID:</b> {}".format(
             call.title, call.date, call.time, duration_string, call.description, call.link, call.key)
         return text
     elif platform == 'Trello':
@@ -91,12 +108,20 @@ def format_call_info(botupdate: BotUpdate, platform='Telegram', context=''):
         duration_string = str(hours) + " Hours, " + str(minutes) + " Minutes"
         text = '''**Call Title:** {}
         **Call Date:** {}
-        **Call Time:** {}
+        **Call Time:** {} UTC
         **Call Duration:** {}
         **Call Description:** {}
         **Call Agenda:** {}
         **Call Link:** {}
         '''.format(call.title, call.date, call.time, duration_string, call.description, call.agenda_link, call.link)
+        return text
+    elif platform == 'Calendar':
+        seconds = int(call.duration)
+        hours = seconds / 3600
+        rest = seconds % 3600
+        minutes = rest / 60
+        duration_string = str(hours) + " Hours, " + str(minutes) + " Minutes"
+        text = 'Date: {}\nTime: {} UTC\nDuration: {}\nDescription: {}\nAgenda: {}\nLink: {}'.format(call.date, call.time, duration_string, call.description, call.agenda_link, call.link)
         return text
 
 

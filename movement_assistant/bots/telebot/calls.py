@@ -75,7 +75,7 @@ def select_call(update, context):
         print(botupdate.selected)
         botupdate.obj = database.get(botupdate.selected, table=database.CALLS, field='id')[0]
         text = utils.format_call_info(botupdate)
-        markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='Trello Card', url=botupdate.get_card_url()), InlineKeyboardButton(text='Edit Info', callback_data=EDIT_CALL)]])
+        markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='Trello Card', url=botupdate.get_card_url()), InlineKeyboardButton(text='Edit Info', callback_data='edit_call')]])
         botupdate.message.edit_text(text=text, reply_markup=markup, parse_mode=ParseMode.HTML)
         utils.delete_pkl('calls', chat_id, user_id)
         return ConversationHandler.END

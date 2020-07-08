@@ -305,14 +305,13 @@ def add_call(botupdate: BotUpdate):
     local_tz = get_localzone()
     print("TRELLO: Time Zone: ", local_tz)
 
-    duestr = datetime.utcfromtimestamp(due.timestamp()).isoformat()
     labels = [client.get_label(upcoming_id, board_id)]
     description = utils.format_call_info(botupdate, platform='Trello')
 
     # CREATE TRELLO CARD
     newcard = planned_calls_list.add_card(
         name=call.title, desc=description, labels=labels, position='top')
-    update_card(newcard.id, due=duestr)
+    update_card(newcard.id, due=due)
     print("TRELLO: Saved Call Card: ", newcard)
 
     # CREATE ATTACHMENTS
@@ -336,8 +335,25 @@ def delete_call(short_url):
 
 
 def edit_call(botupdate: BotUpdate):
-    # EDIT TITLE
-    update_card(card_id=botupdate.obj.card_id, desc=utils.format_call_info(botupdate, platform='Trello'), name=botupdate.obj.title)
+    # EDIT TITLE & DESCRIPTION
+    due = datetime.combine(botupdate.obj.date, botupdate.obj.time)
+    due = due.replace(tzinfo=pytz.UTC)
+    now = utils.now_time()
+    card = get_card(botupdate.obj.card_id)
+    if due < now:
+        dueComplete = True
+        card.change_list(settings.get_var(settings.TL_PC, 'lists'))
+        labels = card.labels
+        for label in labels:
+            card.remove_label(label)
+        card.add_label(client.get_label(past_call_label_id, board_id))
+    else:
+        dueComplete = False
+
+    desc = utils.format_call_info(botupdate, platform='Trello')
+    update_card(card_id=botupdate.obj.card_id, desc=desc, name=botupdate.obj.title, due=due, dueComplete=dueComplete)
+
+
 
 def get_card(short_url):
     cards = board.all_cards()
@@ -362,10 +378,12 @@ def update_card(card_id, desc='', name='', due='', dueComplete=''):
         url += '&name={}'.format(name)
 
     if due != '':
-        url += '&due={}'.format(due)
+        due = utils.utc_to_timezone(due)
+        duestr = due.isoformat()
+        url += '&due={}'.format(duestr)
 
     if dueComplete != '':
-        url += '&dueComplete={}'.format(dueComplete.upper())
+        url += '&dueComplete={}'.format(dueComplete)
 
     url += '&key={}&token={}'.format(TRELLO_KEY, TRELLO_TOKEN)
     headers = {"Accept": "application/json"}
