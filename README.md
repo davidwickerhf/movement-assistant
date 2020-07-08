@@ -1,4 +1,4 @@
-# FFF Transparency WG
+# Grassroots Movement Assistant
 ## How to develop for the bot
 To develop for the bot, a couple of steps need to be undertaken aside from forking and cloning the repository to your local PC.
 The repository contains three branches:
