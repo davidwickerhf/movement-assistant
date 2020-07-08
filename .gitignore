@@ -4,5 +4,5 @@ calendar_token.pkl
 client_secret.json
 .vscode
 __pycache__
-.env
+env
 data.db
