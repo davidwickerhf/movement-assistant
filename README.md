@@ -92,7 +92,7 @@ The program requires a server connected to the internet to run. To achive that y
 ```
 ngrok http 5000
 ```
-- Copy the https link next to "Forwarding" and paste it as SERVER APP DOMAIN in [env_variables.json](fff_automation/secrets/env_variables.json).
+- Copy the https link next to "Forwarding" and paste it as SERVER APP DOMAIN in [env_variables.json](movement_assistant/secrets/env_variables.json).
 > Make sure to copy the HTTPS link (not the HTTP one) and that the ngrok link includes the '/' at the end of it - otherwise the program won't work.
 ### 7b - Running the program on an online server
 This part is optional. In case you decide to upload the code on an online server, please undergo the further steps below:
@@ -100,7 +100,7 @@ This part is optional. In case you decide to upload the code on an online server
 > Don't add the variables 'TRELLO_BOARD_ID' and 'SPREADSHEET' unless you have both the Trello Board and Spreadsheet database set up correctly. If you don't insert these variables, the program will proceed to create a new board and a new spreadsheet for you. If you insert custom values for these variables without having setup the board/spreadsheet correctly, the program might crash.
 - Add your client secret as configuration variable for your server and name it 'CLIENT_SECRET'
 > DO NOT UPLOAD YOUR client_secret.json TO AN ONLINE SERVER. Make sure that file is always included in the .gitignore file.
-> To add your client secret as config variable, see [fff_automation/setup/clean_json.py](fff_automation/setup/clean_json.py). You'll need to copy the values of your client secret and paste it in the file above following the instructions. Then, run the script locally and it will return the client secret formatted correctly into a string, which you can paste as config variable onto your server.
+> To add your client secret as config variable, see [movement_assistant/setup/clean_json.py](movement_assistant/setup/clean_json.py). You'll need to copy the values of your client secret and paste it in the file above following the instructions. Then, run the script locally and it will return the client secret formatted correctly into a string, which you can paste as config variable onto your server.
 
 
 There you go! Now run the [run.py](run.py) file and check if everything is working fine. If you encounter any errors, feel free to add the procedure you undertook and the error code as an issue in the development branch of the repository, mentioning @davidwickerhf 

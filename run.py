@@ -1,5 +1,5 @@
-from fff_automation.modules import settings
-from fff_automation import app, telegram_bot, teleTOKEN, URL
+from movement_assistant.modules import settings
+from movement_assistant import app, telegram_bot, teleTOKEN, URL
 
 
 if __name__ == '__main__':
