@@ -255,3 +255,60 @@ def feedback(feedback):
     # ADD ISSUE IN GITHUB
     feedback = githubc.create_issue(feedback)
     return feedback
+
+
+def authenticate(update, context, state, only_chats=True):
+    """Authenticates user before execiting commands. 
+    If user is not registerred in any web of trust, the function will see weather the current 
+    group is activated and will add the user to the database accordingly.
+    :param update: Telegram Update
+    :param botupdate: BotUpdate - Do not include in the first step of a ConversationHandler.
+    :param state: 0-> Authenticates User | 1-> Makes sure user is the same
+
+    :returns: Authenticated BotUpdate or None if user doesn't have permission
+    :rtype: BotUpdate
+    """
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    if state == 0:
+        # First Conversation Authentication
+        user = database.get(table=database.USERS, item_id=user_id)[0]
+        if user:
+            # User is registerred in web of trust
+            botupdate = BotUpdate(update, update.effective_user)
+            if only_chats and user.id == chat_id:
+                # Command run in private chat
+
+                return None
+            else:
+                return botupdate
+        else:
+            # User is not registerred in web of trust
+            group = database.get(chat_id)[0]
+            if group:
+                # Group chat is activated
+                # Register user in web of trust
+                user = User(user_id, user.first, user.last, username, group.activator_id)
+                database.commit_user(user)
+                botupdate = BotUpdate(update, update.effective_user)
+                return botupdate
+            else:
+                # Group chat is not activated
+                return None
+    else:
+        # Make sure user is the same who started the conversation
+        botupdate = utils.load_pkl('edit_group', chat_id, user_id)
+        if botupdate:
+            return botupdate
+        else:
+            return None
+
+
+def send_message(update, context, text):
+    if update.callback_query:
+        # Update has callbackquery
+        message = update.callback_query.edit_text(text, parse_mode=ParseMode.HTML)
+        return message
+    else:
+        message = update.message.reply_text(text, parse_mode=ParseMode.HTML)
+        return message

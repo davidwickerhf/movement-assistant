@@ -6,6 +6,9 @@ from movement_assistant.bots.telebot import *
 def save_group(update, context):
     print("BOT: --- SAVE GROUP INFO ---")
     # GET GROUP INFORMATION
+    # Is user in web of trust
+    # Is group activated
+    
     chat = update.message.chat
     title = chat.title
     chat_id = chat.id

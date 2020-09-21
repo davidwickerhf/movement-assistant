@@ -25,7 +25,7 @@ colors = {
 }
 
 if not (os.path.isfile('movement_assistant/secrets/calendar_token.pkl') and os.path.getsize('movement_assistant/secrets/calendar_token.pkl') > 0):
-    scope = ['https://www.googleapis.com/auth/calendar']
+    scope = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/calendar.events']
     # CREDENTIALS HAVE NOT BEEN INITIALIZED BEFORE
     client_secret = os.environ.get('CLIENT_SECRET')
     if client_secret != None:
@@ -118,7 +118,6 @@ def edit_event(botupdate, gbotupdate=None):
     service.events().update(calendarId=calendar_id, eventId=event['id'], body=event).execute()
 
 
-
 def delete_event(event_id):
     calendar_id = settings.get_var(key='CALENDAR_ID', default='primary')
     print("CALENDAR: Delete Event: Id: ", event_id)
@@ -126,3 +125,15 @@ def delete_event(event_id):
         service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
     except:
         print('GCALENDAR: Error in Deleting Call Event')
+
+
+def clear_data():
+    calendar_id = settings.get_var(key='CALENDAR_ID', default='primary')
+    page_token = None
+    while True:
+        events = service.events().list(calendarId=calendar_id, pageToken=page_token).execute()
+        for event in events['items']:
+            delete_event(event['id'])
+        page_token = events.get('nextPageToken')
+        if not page_token:
+            break

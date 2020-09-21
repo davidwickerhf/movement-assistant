@@ -1,6 +1,11 @@
 from datetime import datetime
-import sqlite3
-from movement_assistant.modules import utils, settings, encryption
+from movement_assistant.modules.encryption import encrypt, decrypt
+from sqlalchemy import Column, ForeignKey, Integer, String, Table
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import create_engine
+from movement_assistant.modules import utils, settings
+from movement_assistant.classes.organisation import Organisation
 from movement_assistant.classes.call import Call
 from movement_assistant.classes.group import Group
 from movement_assistant.classes.user import User
@@ -10,6 +15,125 @@ import uuid
 GROUPS = 'groups'
 CALLS = 'calls' 
 USERS = 'users'
+
+Base = declarative_base()
+
+memberships = Table(
+    'memberships', Base.metadata,
+    Column('member_id', Integer, ForeignKey('member.id')),
+    Column('organisation_id', Integer, ForeignKey('organisation.id')))
+
+
+class DOrganisation(Base):
+    __tablename__ = 'organisation'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(30))
+    description = Column(String(500))
+    # Ties with other tables
+    groups = relationship('Group', backref='org')
+    members = relationship('Member', secondary=memberships, back_populates='organisations')
+
+
+class DGroup(Base):
+    __tablename__ = 'group'
+    id = Column(Integer, primary_key=True)
+    card_id = Column(String(60), nullable=False)
+    title = Column(String(25), nullable=False)
+    category = Column(String(20), nullable=False)
+    restriction = Column(String(20), nullable=False)
+    region = Column(String(20), nullable=False)
+    platform = Column(String(20), nullable=False)
+    color = Column(Integer, nullable=False)
+    purpose = Column(String(350), nullable=True)
+    onboarding = Column(String(350), nullable=True)
+    date = Column(String(20), nullable=False)
+    status = Column(Integer, nullable=False)
+    is_subgroup = Column(String(20), nullable=False)
+    # Ties with other tables
+    parentgroup = Column(Integer, ForeignKey('group.id'))
+    activator = Column(Integer, ForeignKey('member.id'))
+    organisation = Column(Integer, ForeignKey('organisation.id'))
+    subgroups = relationship('Group', backref='parentgroup')
+    calls = relationship('Call', backref='group')
+
+
+class DCall(Base):
+    __tablename__ = 'call'
+    id = Column(Integer, primary_key=True)
+    group = Column(Integer, ForeignKey('group.id'))
+    card_id = Column(String(60), nullable=False)
+    title = Column(String(25), nullable=False)
+    date = Column(String(30), nullable=False)
+    time = Column(String(20), nullable=False)
+    duration = Column(String(20), nullable=False)
+    description = Column(String(350), nullable=True)
+    agenda_link = Column(String(350), nullable=True)
+    calendar_url = Column(String(350), nullable=False)
+    link = Column(String(350), nullable=True)
+    activator = Column(Integer, ForeignKey('member.id'))
+    status = Column(Integer, nullable=False)
+
+
+class DMember(Base):
+    __tablename__ = 'member'
+    id = Column(Integer, primary_key=True)
+    first = Column(String(25), nullable=True)
+    last = Column(String(25), nullable=False)
+    username = Column(String(25), nullable=False)
+    activator = Column(Integer, ForeignKey('member.id'))
+    organisations = relationship
+    activated_groups = relationship('Group', backref='activator')
+    activated_calls = relationship('Call', backref='activator')
+    activated_members = relationship('Member', backref='activator')
+    organisations = relationship('Organisation', secondary=memberships,back_populates='members')
+
+
+def setup():
+    engine = create_engine('sqlite:///data.db')
+    Base.metadata.create_all(engine)
+
+
+def addObj(obj):
+    """
+    Adds objects to the database depending on the obj type.
+    Assumes member objects are saved before other objects.
+    """
+    engine = create_engine('sqlite:///data.db')
+    Base.metadata.bind = engine
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    # create new object based on obj type
+    if isinstance(obj, Group):
+        # object is a group
+        dobj = DGroup(
+            card_id=encrypt(obj.card_id),
+            title=obj.title,
+            category=obj.category,
+            restriction=obj.restriction,
+            region=obj.region,
+            platform=obj.platform,
+            color=obj.color,
+            purpose=obj.purpose,
+            onboarding=obj.onboarding,
+            date=str(obj.date),
+            status=obj.status,
+            is_subgroup=str(obj.is_subgroup),
+            parentgroup=obj.parentgroup,
+            activator=encrypt(obj.activator_id)
+        )
+    elif isinstance(obj, Call):
+        # object is a call
+        
+    elif isinstance(obj, Organisation):
+        # object is org
+    elif isinstance(obj, Member):
+        # object is member
+    else:
+        raise ValueError
+    session.add(dobj)
+    session.commit()
+    
+    
 
 
 def get_group_title(group_id):
@@ -170,9 +294,12 @@ def commit_user(obj):
 
 
 def get(item_id='', table='groups', field='id'):
-    """
-    Return a list of group/call/user objects that match the query of the item_id.
-    Returns [None] if there is no result
+    """Return a list of objects that match the query.
+    Returns [None] if no object matches the query.
+    :param item_id: The id to look for. If no id is provided, a list of all available items in the specified table will be returned
+    :param table: the Database table to look into
+    :field: the field to match with the id. Can be 'id', 'key', 'parent_group', 'activator_id', 'chat_id'
+    :returns: List of objects or [None]
     """
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
@@ -180,7 +307,6 @@ def get(item_id='', table='groups', field='id'):
     c.execute(sqlstr)
     results = c.fetchall()
     conn.close()
-    
     if results not in [None, []]:
         if not isinstance(results[0], tuple):
             results = [results]
@@ -285,11 +411,13 @@ def delete_record(item_id, table):
 def setup():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='orgs'")
+    calls = c.fetchone()
     c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
     users = c.fetchone()
-    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='groups'")
     groups = c.fetchone()
-    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='calls'")
     calls = c.fetchone()
     conn.close()
     if None in (users, groups, calls):
@@ -297,6 +425,3 @@ def setup():
         settings.set_database(users, groups, calls)
     else:
         print('DATABASE: DB already set up')
-
-
-setup()
