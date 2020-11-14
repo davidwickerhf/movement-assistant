@@ -1,5 +1,5 @@
 from datetime import datetime
-from movement_assistant.modules.encryption import encrypt, decrypt
+from movement_assistant.modules import encryption
 from sqlalchemy import Column, ForeignKey, Integer, String, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
